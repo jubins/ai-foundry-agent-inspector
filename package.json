@@ -1,0 +1,97 @@
+{
+  "name": "ai-foundry-agent-inspector",
+  "displayName": "AI Foundry Agent Inspector",
+  "description": "Visualize and debug Azure AI Foundry Agent Service runs directly in VS Code",
+  "version": "0.1.0",
+  "publisher": "jubinsoni",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Debuggers"
+  ],
+  "keywords": [
+    "azure",
+    "ai",
+    "foundry",
+    "agent",
+    "trace",
+    "debug"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "foundryTrace.connect",
+        "title": "Foundry Trace: Connect to Project"
+      },
+      {
+        "command": "foundryTrace.listRuns",
+        "title": "Foundry Trace: List Recent Runs"
+      },
+      {
+        "command": "foundryTrace.setApiKey",
+        "title": "Foundry Trace: Set API Key"
+      },
+      {
+        "command": "foundryTrace.clearApiKey",
+        "title": "Foundry Trace: Clear API Key"
+      }
+    ],
+    "configuration": {
+      "title": "AI Foundry Agent Inspector",
+      "properties": {
+        "aiFoundryAgentInspector.projectEndpoint": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Your Azure AI Foundry project endpoint URL (e.g. `https://<hub>.services.ai.azure.com/api/projects/<project>`)"
+        },
+        "aiFoundryAgentInspector.authMethod": {
+          "type": "string",
+          "enum": [
+            "entraId",
+            "apiKey"
+          ],
+          "enumDescriptions": [
+            "Use Azure DefaultAzureCredential (Entra ID / managed identity / az login)",
+            "Use an API key stored securely in VS Code SecretStorage"
+          ],
+          "default": "entraId",
+          "description": "Authentication method for connecting to your Foundry project"
+        },
+        "aiFoundryAgentInspector.maxRunsToList": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of recent runs to fetch when listing runs"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@azure/ai-projects": "^2.2.0",
+    "@azure/identity": "^4.13.1"
+  }
+}
