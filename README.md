@@ -1,10 +1,10 @@
-# AI Foundry Agent Inspector
+# Foundry Trace Inspector
 
-**Debug Azure AI Foundry agents without leaving VS Code. Free, open source.**
+Inspect Azure AI Foundry agent traces without leaving VS Code. **Free, open source.**
 
-Paste a response ID once — then explore every LLM turn, tool call, token count, and timing right inside your editor. No browser tab switching.
+See exactly what your agent did on every run — which tools it called, what it sent and received, how many tokens each LLM turn cost, and the duration and dollar cost — all in an interactive timeline panel. Track multiple conversations and responses from the Activity Bar.
 
-> **This extension is completely free.** No account, no subscription, no telemetry.
+> No account, no subscription, no telemetry.
 
 <!--
   SCREENSHOT: Main trace panel open with Trajectories tab visible and spans expanded.
