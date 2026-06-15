@@ -2,40 +2,80 @@ import * as vscode from "vscode";
 import OpenAI from "openai";
 import { createClient } from "../client";
 import { getConfig, getApiKey } from "../config";
-import { normalizeFromResponses } from "../trace/normalizer";
+import { normalizeFromResponses, normalizeFromConversationItems } from "../trace/normalizer";
 import { showTracePanel } from "../webview/tracePanel";
 import type { OutputChannel } from "../outputChannel";
 import type { AIProjectClient } from "@azure/ai-projects";
 
+export interface ShowTraceOptions {
+  responseId?: string;       // pre-selected from sidebar
+  conversationId?: string;   // pre-selected from sidebar (future: conv flow)
+}
+
 export async function showTrace(
   context: vscode.ExtensionContext,
   secrets: vscode.SecretStorage,
-  out: OutputChannel
+  out: OutputChannel,
+  options?: ShowTraceOptions
 ): Promise<void> {
   const config = getConfig();
 
   if (!config.projectEndpoint) {
     const action = await vscode.window.showErrorMessage(
       "No Foundry project endpoint configured.",
-      "Open Settings"
+      "Configure Now"
     );
-    if (action === "Open Settings") {
-      await vscode.commands.executeCommand(
-        "workbench.action.openSettings",
-        "aiFoundryAgentInspector"
-      );
+    if (action === "Configure Now") {
+      await vscode.commands.executeCommand("foundryInspector.openOnboarding");
     }
     return;
   }
 
-  // Build a QuickPick from saved IDs + option to add new ones
-  const responseIds = await pickResponseIds(config.responseIds);
-  if (!responseIds) { return; }
+  // Conversation flow: fetch all items in a conversation
+  if (options?.conversationId) {
+    const convId = options.conversationId;
+    const fetchAndShowConv = async (): Promise<void> => {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Fetching conversation ${convId.slice(0, 20)}…`, cancellable: false },
+        async () => {
+          try {
+            const apiKey = config.authMethod === "apiKey" ? await getApiKey(secrets) : undefined;
+            const client = createClient(config, apiKey);
+            const openai = buildOpenAIClient(config.projectEndpoint, apiKey, client);
+            const items: OpenAI.Conversations.ConversationItem[] = [];
+            for await (const item of await openai.conversations.items.list(convId)) {
+              items.push(item);
+            }
+            out.appendLine(`Conversation ${convId}: ${items.length} items`);
+            out.appendLine(`Raw conversation items:\n${JSON.stringify(items, null, 2)}`);
+            const traceAgents = normalizeFromConversationItems(convId, items);
+            showTracePanel(context, traceAgents, fetchAndShowConv);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            out.appendLine(`Conversation fetch error: ${message}`);
+            vscode.window.showErrorMessage(`Could not fetch conversation: ${message}`);
+          }
+        }
+      );
+    };
+    await fetchAndShowConv();
+    return;
+  }
 
-  // Save back to settings so next time they appear pre-checked
-  await vscode.workspace
-    .getConfiguration("aiFoundryAgentInspector")
-    .update("responseIds", responseIds, vscode.ConfigurationTarget.Global);
+  // If called from sidebar with a known response ID, use it directly
+  let responseIds: string[];
+  if (options?.responseId) {
+    responseIds = [options.responseId];
+  } else {
+    // Interactive QuickPick
+    const picked = await pickResponseIds(config.responseIds);
+    if (!picked) { return; }
+    responseIds = picked;
+    // Save back to settings so next time they appear pre-checked
+    await vscode.workspace
+      .getConfiguration("aiFoundryAgentInspector")
+      .update("responseIds", responseIds, vscode.ConfigurationTarget.Global);
+  }
 
   const fetchAndShow = async (): Promise<void> => {
     await vscode.window.withProgress(
