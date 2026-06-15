@@ -73,6 +73,19 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
+    vscode.commands.registerCommand("foundryInspector.deleteResponse", async (treeItem: { data?: ResponseSummary; id?: string }) => {
+      // VS Code passes the FoundryTreeItem; the ResponseSummary is on .data
+      const id = treeItem?.data?.id ?? (treeItem as unknown as ResponseSummary)?.id;
+      if (!id) { return; }
+      const current = vscode.workspace
+        .getConfiguration("aiFoundryAgentInspector")
+        .get<string[]>("responseIds", []);
+      await vscode.workspace
+        .getConfiguration("aiFoundryAgentInspector")
+        .update("responseIds", current.filter(r => r !== id), vscode.ConfigurationTarget.Global);
+      await loadConnectionData(context, out);
+    }),
+
     vscode.commands.registerCommand("foundryInspector.addResponse", async () => {
       const respId = await vscode.window.showInputBox({
         title: "Add Response ID",

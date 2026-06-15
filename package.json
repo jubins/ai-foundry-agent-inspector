@@ -104,6 +104,11 @@
         "command": "foundryInspector.addResponse",
         "title": "AI Foundry: Add Response ID",
         "icon": "$(add)"
+      },
+      {
+        "command": "foundryInspector.deleteResponse",
+        "title": "AI Foundry: Delete Response",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -128,6 +133,11 @@
         {
           "command": "foundryInspector.addResponse",
           "when": "view == foundryInspector.sidebar && viewItem == section-responses",
+          "group": "inline"
+        },
+        {
+          "command": "foundryInspector.deleteResponse",
+          "when": "view == foundryInspector.sidebar && viewItem == response",
           "group": "inline"
         }
       ]

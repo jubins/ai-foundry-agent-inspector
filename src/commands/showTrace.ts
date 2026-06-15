@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import OpenAI from "openai";
 import { createClient } from "../client";
 import { getConfig, getApiKey } from "../config";
-import { normalizeFromResponses } from "../trace/normalizer";
+import { normalizeFromResponses, normalizeFromConversationItems } from "../trace/normalizer";
 import { showTracePanel } from "../webview/tracePanel";
 import type { OutputChannel } from "../outputChannel";
 import type { AIProjectClient } from "@azure/ai-projects";
@@ -28,6 +28,37 @@ export async function showTrace(
     if (action === "Configure Now") {
       await vscode.commands.executeCommand("foundryInspector.openOnboarding");
     }
+    return;
+  }
+
+  // Conversation flow: fetch all items in a conversation
+  if (options?.conversationId) {
+    const convId = options.conversationId;
+    const fetchAndShowConv = async (): Promise<void> => {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Fetching conversation ${convId.slice(0, 20)}…`, cancellable: false },
+        async () => {
+          try {
+            const apiKey = config.authMethod === "apiKey" ? await getApiKey(secrets) : undefined;
+            const client = createClient(config, apiKey);
+            const openai = buildOpenAIClient(config.projectEndpoint, apiKey, client);
+            const items: OpenAI.Conversations.ConversationItem[] = [];
+            for await (const item of await openai.conversations.items.list(convId)) {
+              items.push(item);
+            }
+            out.appendLine(`Conversation ${convId}: ${items.length} items`);
+            out.appendLine(`Raw conversation items:\n${JSON.stringify(items, null, 2)}`);
+            const traceAgents = normalizeFromConversationItems(convId, items);
+            showTracePanel(context, traceAgents, fetchAndShowConv);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            out.appendLine(`Conversation fetch error: ${message}`);
+            vscode.window.showErrorMessage(`Could not fetch conversation: ${message}`);
+          }
+        }
+      );
+    };
+    await fetchAndShowConv();
     return;
   }
 

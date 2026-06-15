@@ -33,6 +33,8 @@ export interface LlmStep {
   completedAt?: string;
   durationMs?: number;
   toolCalls: ToolCallStep[];
+  responseId?: string;
+  traceId?: string;
 }
 
 export interface MessageStep {
@@ -41,6 +43,8 @@ export interface MessageStep {
   role: MessageRole;
   content: string;
   createdAt?: string;
+  responseId?: string;
+  traceId?: string;
 }
 
 export type TraceStep = LlmStep | ToolCallStep | MessageStep;
@@ -53,6 +57,8 @@ export interface TraceSession {
   completedAt?: string;
   totalTokens?: TokenUsage;
   steps: TraceStep[];
+  /** "response" = opened directly from a resp_ ID; "conversation" = opened from conv_ ID */
+  source?: "response" | "conversation";
 }
 
 export interface TraceAgent {
