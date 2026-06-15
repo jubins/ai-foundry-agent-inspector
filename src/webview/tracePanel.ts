@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { TraceAgent } from "../trace/model";
+import { getConnectionState, setConnectionState } from "../sidebar/connectionState";
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let _onRevealSidebar: ((responseId: string) => void) | undefined;
@@ -38,18 +39,24 @@ export function showTracePanel(
     } else if (msg.type === "viewTrace") {
       const respId: string = msg.responseId;
       if (!respId) { return; }
-      // Save to settings so it appears in the Responses sidebar
+      // Save to settings so it persists across sessions
       const cfg = vscode.workspace.getConfiguration("aiFoundryAgentInspector");
       const existing = cfg.get<string[]>("responseIds", []);
       if (!existing.includes(respId)) {
         await cfg.update("responseIds", [...existing, respId], vscode.ConfigurationTarget.Global);
       }
-      // Refresh sidebar then open the individual response trace and reveal in sidebar
-      await vscode.commands.executeCommand("foundryInspector.silentRefresh");
+      // Immediately add a placeholder to the sidebar so the entry appears without waiting for a full API refresh
+      const state = getConnectionState();
+      if (!state.responses.find(r => r.id === respId)) {
+        setConnectionState({ responses: [...state.responses, { id: respId }] });
+      }
+      // Open the individual response trace, then reveal in sidebar
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
       setTimeout(() => {
         if (_onRevealSidebar) { _onRevealSidebar(respId); }
       }, 400);
+      // Hydrate full metadata in the background
+      vscode.commands.executeCommand("foundryInspector.silentRefresh");
     }
   }, null, context.subscriptions);
 

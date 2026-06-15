@@ -109,6 +109,11 @@
         "command": "foundryInspector.deleteResponse",
         "title": "AI Foundry: Delete Response",
         "icon": "$(trash)"
+      },
+      {
+        "command": "foundryInspector.deleteConversation",
+        "title": "AI Foundry: Delete Conversation",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -138,6 +143,11 @@
         {
           "command": "foundryInspector.deleteResponse",
           "when": "view == foundryInspector.sidebar && viewItem == response",
+          "group": "inline"
+        },
+        {
+          "command": "foundryInspector.deleteConversation",
+          "when": "view == foundryInspector.sidebar && viewItem == conversation",
           "group": "inline"
         }
       ]

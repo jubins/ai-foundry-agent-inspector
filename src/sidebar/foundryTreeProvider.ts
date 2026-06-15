@@ -9,6 +9,7 @@ import {
 } from "./connectionState";
 import { getConfig, getApiKey } from "../config";
 import { createClient } from "../client";
+import type { AIProjectClient } from "@azure/ai-projects";
 import OpenAI from "openai";
 
 // ── Tree item kinds ───────────────────────────────────────────────────────────
@@ -355,7 +356,7 @@ export async function loadConnectionData(
       : undefined;
 
     const client = createClient(cfg, apiKey);
-    const openai = buildOpenAIClient(cfg.projectEndpoint, apiKey);
+    const openai = buildOpenAIClient(cfg.projectEndpoint, apiKey, client);
 
     // Load agents — best-effort, don't let failure abort response hydration
     const agents: Array<{ id: string; name: string }> = [];
@@ -421,9 +422,9 @@ export async function loadConnectionData(
   }
 }
 
-function buildOpenAIClient(endpoint: string, apiKey: string | undefined): OpenAI {
-  const baseURL = `${endpoint.replace(/\/$/, "")}/openai/v1`;
+function buildOpenAIClient(endpoint: string, apiKey: string | undefined, client: AIProjectClient): OpenAI {
   if (apiKey) {
+    const baseURL = `${endpoint.replace(/\/$/, "")}/openai/v1`;
     return new OpenAI({
       apiKey,
       baseURL,
@@ -431,7 +432,7 @@ function buildOpenAIClient(endpoint: string, apiKey: string | undefined): OpenAI
       dangerouslyAllowBrowser: true,
     });
   }
-  return new OpenAI({ apiKey: "placeholder", baseURL, dangerouslyAllowBrowser: true });
+  return client.getOpenAIClient();
 }
 
 export type { ResponseSummary };

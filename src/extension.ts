@@ -104,6 +104,18 @@ export function activate(context: vscode.ExtensionContext): void {
       await loadConnectionData(context, out, true);
     }),
 
+    vscode.commands.registerCommand("foundryInspector.deleteConversation", async (treeItem: { data?: ConversationSummary; id?: string }) => {
+      const id = treeItem?.data?.id ?? (treeItem as unknown as ConversationSummary)?.id;
+      if (!id) { return; }
+      const current = vscode.workspace
+        .getConfiguration("aiFoundryAgentInspector")
+        .get<string[]>("conversationIds", []);
+      await vscode.workspace
+        .getConfiguration("aiFoundryAgentInspector")
+        .update("conversationIds", current.filter(c => c !== id), vscode.ConfigurationTarget.Global);
+      await loadConnectionData(context, out, true);
+    }),
+
     vscode.commands.registerCommand("foundryInspector.addResponse", async () => {
       const respId = await vscode.window.showInputBox({
         title: "Add Response ID",
