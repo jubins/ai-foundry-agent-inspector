@@ -45,6 +45,9 @@ export class FoundryTreeProvider
     new vscode.EventEmitter<FoundryTreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+  private _selectedConvId: string | undefined;
+  get selectedConvId(): string | undefined { return this._selectedConvId; }
+
   constructor(private readonly context: vscode.ExtensionContext) {
     onDidChangeConnection(() => this._onDidChangeTreeData.fire());
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -52,6 +55,11 @@ export class FoundryTreeProvider
         this._onDidChangeTreeData.fire();
       }
     }, null, context.subscriptions);
+  }
+
+  selectConversation(convId: string | undefined): void {
+    this._selectedConvId = convId || undefined;
+    this._onDidChangeTreeData.fire();
   }
 
   refresh(): void {
@@ -144,15 +152,23 @@ export class FoundryTreeProvider
     convSection.contextValue = "section-conversations";
     convSection.tooltip = "Conversations tracked from your Foundry project. Click + to add a conversation ID.";
 
+    const filteredResponses = this._selectedConvId
+      ? state.responses.filter(r => r.conversationId === this._selectedConvId)
+      : state.responses;
+
     const respSection = new FoundryTreeItem(
       "Responses",
       "section-responses",
       vscode.TreeItemCollapsibleState.Expanded
     );
-    respSection.description = `${state.responses.length}`;
+    respSection.description = this._selectedConvId
+      ? `${filteredResponses.length} of ${state.responses.length}`
+      : `${state.responses.length}`;
     respSection.iconPath = new vscode.ThemeIcon("list-unordered");
     respSection.contextValue = "section-responses";
-    respSection.tooltip = "Individual response traces. Click + to add a response ID (resp_...) from the Foundry portal.";
+    respSection.tooltip = this._selectedConvId
+      ? `Showing responses for selected conversation. Click a different conversation to filter, or click the same one again to clear.`
+      : "All tracked responses. Click a conversation above to filter.";
 
     return [convSection, respSection];
   }
@@ -188,6 +204,7 @@ export class FoundryTreeProvider
     }
 
     return conversations.map((conv) => {
+      const isSelected = this._selectedConvId === conv.id;
       const item = new FoundryTreeItem(
         conv.label,
         "conversation",
@@ -197,12 +214,12 @@ export class FoundryTreeProvider
       item.description = conv.createdAt
         ? new Date(conv.createdAt * 1000).toLocaleString()
         : conv.id.slice(0, 24) + "…";
-      item.iconPath = new vscode.ThemeIcon("comment-discussion");
-      item.tooltip = `${conv.id}\nClick to view full conversation timeline`;
+      item.iconPath = new vscode.ThemeIcon(isSelected ? "comment-discussion" : "comment-discussion");
+      item.tooltip = `${conv.id}\n${isSelected ? "Selected — Responses filtered below. Click again to clear." : "Click to filter Responses, click again to open timeline"}`;
       item.contextValue = "conversation";
       item.command = {
-        command: "foundryInspector.openConversation",
-        title: "Open Conversation",
+        command: "foundryInspector.selectConversation",
+        title: "Select Conversation",
         arguments: [conv],
       };
       return item;
@@ -213,15 +230,18 @@ export class FoundryTreeProvider
 
   private _responseItems(): FoundryTreeItem[] {
     const { responses } = getConnectionState();
+    const visible = this._selectedConvId
+      ? responses.filter(r => r.conversationId === this._selectedConvId)
+      : responses;
 
-    if (responses.length === 0) {
-      const hint1 = new FoundryTreeItem(
+    if (visible.length === 0 && responses.length === 0) {
+      const hint = new FoundryTreeItem(
         "No responses tracked yet",
         "hint",
         vscode.TreeItemCollapsibleState.None
       );
-      hint1.iconPath = new vscode.ThemeIcon("info");
-      hint1.tooltip =
+      hint.iconPath = new vscode.ThemeIcon("info");
+      hint.tooltip =
         "A response ID (resp_...) represents a single agent turn. " +
         "Find it in the Foundry portal → your agent → Traces tab. " +
         "Click the + button above to add one.";
@@ -236,10 +256,10 @@ export class FoundryTreeProvider
       addItem.tooltip = "Paste a response ID from the Foundry portal Traces tab";
       addItem.command = { command: "foundryInspector.addResponse", title: "Add Response ID" };
 
-      return [hint1, addItem];
+      return [hint, addItem];
     }
 
-    const items = responses.map((resp) => {
+    const items = visible.map((resp) => {
       const shortId = resp.id.length > 24 ? resp.id.slice(0, 24) + "…" : resp.id;
       const item = new FoundryTreeItem(
         shortId,
@@ -268,7 +288,6 @@ export class FoundryTreeProvider
       return item;
     });
 
-    // Always add an "Add more" item at the bottom
     const addItem = new FoundryTreeItem(
       "Add response ID…",
       "action",
@@ -321,15 +340,16 @@ export async function loadConnectionData(
     for (const id of savedIds) {
       try {
         const resp = await openai.responses.retrieve(id);
+        const convId = resp.conversation?.id;
         responses.push({
           id: resp.id,
           status: resp.status ?? undefined,
           model: resp.model,
           createdAt: resp.created_at,
+          conversationId: convId,
         });
 
         // Extract conversation ID from the response
-        const convId = resp.conversation?.id;
         if (convId && !convMap.has(convId)) {
           convMap.set(convId, {
             id: convId,

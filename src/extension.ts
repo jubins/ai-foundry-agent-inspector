@@ -39,6 +39,14 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
 
     vscode.commands.registerCommand(
+      "foundryInspector.selectConversation",
+      (conv: ConversationSummary) => {
+        treeProvider.selectConversation(conv.id);
+        showTrace(context, secrets, out, { conversationId: conv.id });
+      }
+    ),
+
+    vscode.commands.registerCommand(
       "foundryInspector.openConversation",
       (conv: ConversationSummary) => {
         showTrace(context, secrets, out, { conversationId: conv.id });
