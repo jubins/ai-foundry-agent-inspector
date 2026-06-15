@@ -406,6 +406,7 @@ function buildHtml(agents: TraceAgent[]): string {
     text-transform: capitalize; letter-spacing: 0.02em;
   }
   .kind-conversation { background: #7b52ab30; color: #c586c0; border: 1px solid #7b52ab50; }
+  .kind-session      { background: #7b52ab30; color: #c586c0; border: 1px solid #7b52ab50; }
   .kind-invoke       { background: #0078d430; color: #569cd6; border: 1px solid #0078d450; }
   .kind-chat         { background: #008c6630; color: #4ec9b0; border: 1px solid #008c6650; }
   .kind-tool         { background: #7c6300; color: #dcdcaa; border: 1px solid #dcdcaa40; }
@@ -439,6 +440,7 @@ function buildHtml(agents: TraceAgent[]): string {
     opacity: 0.85;
   }
   .bar-conversation { background: #7b52abcc; }
+  .bar-session      { background: #7b52abcc; }
   .bar-invoke       { background: #0078d4cc; }
   .bar-chat         { background: #4ec9b0cc; }
   .bar-tool         { background: #dcdcaa99; }
@@ -793,7 +795,7 @@ function buildHtml(agents: TraceAgent[]): string {
         const isConv = session.source === 'conversation';
         const rootSpan = {
           id: session.id,
-          kind: isConv ? 'conversation' : 'invoke',
+          kind: isConv ? 'conversation' : 'session',
           name: isConv ? session.id.slice(0, 28) + (session.id.length > 28 ? '…' : '') : (agent.name || 'Session'),
           model: agent.model ?? null,
           status: session.status,
@@ -891,10 +893,13 @@ function buildHtml(agents: TraceAgent[]): string {
 
           rootSpan.children.push(invokeSpan);
 
-          // Accumulate timing on root
+          // Accumulate timing on root — span from earliest start to latest end
           if (invokeStart) {
             if (!rootSpan.startMs || invokeStart < rootSpan.startMs) { rootSpan.startMs = invokeStart; }
-            if (!rootSpan.endMs || invokeStart > rootSpan.endMs) { rootSpan.endMs = invokeStart; }
+          }
+          const invokeEndForRoot = invokeEnd ?? invokeStart;
+          if (invokeEndForRoot) {
+            if (!rootSpan.endMs || invokeEndForRoot > rootSpan.endMs) { rootSpan.endMs = invokeEndForRoot; }
           }
         }
 
@@ -1005,9 +1010,10 @@ function buildHtml(agents: TraceAgent[]): string {
         });
       }
 
-      // Kind badge — root conversation/invoke uses agent/session name as badge label
+      // Kind badge
       const kindLabel = {
         conversation: 'Conversation',
+        session: 'Session',
         invoke: 'Invoke Agent',
         chat: 'Chat',
         tool: 'Execute Tool',
@@ -1016,7 +1022,7 @@ function buildHtml(agents: TraceAgent[]): string {
       const kindBadge = el('span', {'class': 'span-kind kind-' + span.kind}, kindLabel);
 
       // Status dot — only for spans with meaningful execution status (not root or user messages)
-      const showDot = span.kind === 'chat' || span.kind === 'tool' || (span.kind === 'invoke' && depth > 0);
+      const showDot = span.kind === 'chat' || span.kind === 'tool' || span.kind === 'invoke';
       const dot = showDot ? el('div', {'class': 'span-status status-dot-' + span.status}) : null;
 
       // Name — strip redundant prefix from span.name so model isn't duplicated in modelEl
