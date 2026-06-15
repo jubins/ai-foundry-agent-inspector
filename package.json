@@ -38,6 +38,24 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "foundryInspector",
+          "title": "AI Foundry Inspector",
+          "icon": "images/icon-sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "foundryInspector": [
+        {
+          "id": "foundryInspector.sidebar",
+          "name": "AI Foundry Inspector",
+          "icon": "images/icon-sidebar.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "foundryTrace.connect",
@@ -58,8 +76,62 @@
       {
         "command": "foundryTrace.showTrace",
         "title": "Foundry Trace: Show Trace"
+      },
+      {
+        "command": "foundryInspector.openOnboarding",
+        "title": "AI Foundry: Setup / Configure",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "foundryInspector.refresh",
+        "title": "AI Foundry: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "foundryInspector.openConversation",
+        "title": "AI Foundry: Open Conversation"
+      },
+      {
+        "command": "foundryInspector.openResponse",
+        "title": "AI Foundry: Open Response"
+      },
+      {
+        "command": "foundryInspector.addConversation",
+        "title": "AI Foundry: Add Conversation ID",
+        "icon": "$(add)"
+      },
+      {
+        "command": "foundryInspector.addResponse",
+        "title": "AI Foundry: Add Response ID",
+        "icon": "$(add)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "foundryInspector.refresh",
+          "when": "view == foundryInspector.sidebar",
+          "group": "navigation"
+        },
+        {
+          "command": "foundryInspector.openOnboarding",
+          "when": "view == foundryInspector.sidebar",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "foundryInspector.addConversation",
+          "when": "view == foundryInspector.sidebar && viewItem == section-conversations",
+          "group": "inline"
+        },
+        {
+          "command": "foundryInspector.addResponse",
+          "when": "view == foundryInspector.sidebar && viewItem == section-responses",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "title": "AI Foundry Agent Inspector",
       "properties": {
@@ -92,7 +164,13 @@
           "type": "array",
           "items": { "type": "string" },
           "default": [],
-          "markdownDescription": "List of response IDs (`resp_...`) to fetch when running \"Foundry Trace: Show Trace\". Find these in the Foundry portal Agents → your agent → Traces tab."
+          "markdownDescription": "List of response IDs (`resp_...`) tracked in the sidebar. Find these in the Foundry portal Agents → your agent → Traces tab."
+        },
+        "aiFoundryAgentInspector.conversationIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "List of conversation IDs (`conv_...`) tracked in the sidebar. These are extracted automatically from saved responses, or can be added manually."
         }
       }
     }

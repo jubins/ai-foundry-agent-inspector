@@ -216,6 +216,75 @@ function normalizeResponseChain(
             existing.output = out.output;
           }
         }
+      } else if (item.type === "web_search_call") {
+        // Built-in web search tool (ResponseFunctionWebSearch)
+        const ws = item as OpenAI.Responses.ResponseFunctionWebSearch;
+        const toolStep: ToolCallStep = {
+          kind: "toolCall",
+          id: ws.id,
+          name: "web_search",
+          input: (ws as unknown as { action?: unknown }).action,
+          output: undefined,
+          status: ws.status === "completed" ? "completed"
+               : ws.status === "in_progress" ? "in_progress"
+               : "unknown",
+        };
+        llmStep.toolCalls.push(toolStep);
+      } else if (item.type === "file_search_call") {
+        // Built-in file search tool (ResponseFileSearchToolCall)
+        const fs = item as OpenAI.Responses.ResponseFileSearchToolCall;
+        const toolStep: ToolCallStep = {
+          kind: "toolCall",
+          id: fs.id,
+          name: "file_search",
+          input: { queries: (fs as unknown as { queries?: unknown }).queries },
+          output: (fs as unknown as { results?: unknown }).results,
+          status: fs.status === "completed" ? "completed"
+               : fs.status === "in_progress" ? "in_progress"
+               : "unknown",
+        };
+        llmStep.toolCalls.push(toolStep);
+      } else if (item.type === "code_interpreter_call") {
+        // Built-in code interpreter (ResponseCodeInterpreterToolCall)
+        const ci = item as OpenAI.Responses.ResponseCodeInterpreterToolCall;
+        const ciAny = ci as unknown as { code?: string; outputs?: unknown; status?: string };
+        const toolStep: ToolCallStep = {
+          kind: "toolCall",
+          id: ci.id,
+          name: "code_interpreter",
+          input: { code: ciAny.code },
+          output: ciAny.outputs,
+          status: ciAny.status === "completed" ? "completed"
+               : ciAny.status === "in_progress" ? "in_progress"
+               : "unknown",
+        };
+        llmStep.toolCalls.push(toolStep);
+      } else {
+        // Generic fallback for any other built-in tool type
+        // (computer_call, mcp_call, image_generation_call, etc.)
+        const generic = item as unknown as {
+          type: string;
+          id?: string;
+          name?: string;
+          call_id?: string;
+          status?: string;
+          [key: string]: unknown;
+        };
+        const toolName = generic.name ?? generic.type;
+        if (toolName !== "message" && toolName !== "function_call_output") {
+          const { type: _t, id: _id, name: _n, status: _s, ...rest } = generic;
+          const toolStep: ToolCallStep = {
+            kind: "toolCall",
+            id: generic.id ?? generic.call_id ?? `${generic.type}-${Date.now()}`,
+            name: toolName,
+            input: Object.keys(rest).length > 0 ? rest : undefined,
+            output: undefined,
+            status: generic.status === "completed" ? "completed"
+                 : generic.status === "in_progress" ? "in_progress"
+                 : "unknown",
+          };
+          llmStep.toolCalls.push(toolStep);
+        }
       }
     }
 

@@ -7,35 +7,44 @@ import { showTracePanel } from "../webview/tracePanel";
 import type { OutputChannel } from "../outputChannel";
 import type { AIProjectClient } from "@azure/ai-projects";
 
+export interface ShowTraceOptions {
+  responseId?: string;       // pre-selected from sidebar
+  conversationId?: string;   // pre-selected from sidebar (future: conv flow)
+}
+
 export async function showTrace(
   context: vscode.ExtensionContext,
   secrets: vscode.SecretStorage,
-  out: OutputChannel
+  out: OutputChannel,
+  options?: ShowTraceOptions
 ): Promise<void> {
   const config = getConfig();
 
   if (!config.projectEndpoint) {
     const action = await vscode.window.showErrorMessage(
       "No Foundry project endpoint configured.",
-      "Open Settings"
+      "Configure Now"
     );
-    if (action === "Open Settings") {
-      await vscode.commands.executeCommand(
-        "workbench.action.openSettings",
-        "aiFoundryAgentInspector"
-      );
+    if (action === "Configure Now") {
+      await vscode.commands.executeCommand("foundryInspector.openOnboarding");
     }
     return;
   }
 
-  // Build a QuickPick from saved IDs + option to add new ones
-  const responseIds = await pickResponseIds(config.responseIds);
-  if (!responseIds) { return; }
-
-  // Save back to settings so next time they appear pre-checked
-  await vscode.workspace
-    .getConfiguration("aiFoundryAgentInspector")
-    .update("responseIds", responseIds, vscode.ConfigurationTarget.Global);
+  // If called from sidebar with a known response ID, use it directly
+  let responseIds: string[];
+  if (options?.responseId) {
+    responseIds = [options.responseId];
+  } else {
+    // Interactive QuickPick
+    const picked = await pickResponseIds(config.responseIds);
+    if (!picked) { return; }
+    responseIds = picked;
+    // Save back to settings so next time they appear pre-checked
+    await vscode.workspace
+      .getConfiguration("aiFoundryAgentInspector")
+      .update("responseIds", responseIds, vscode.ConfigurationTarget.Global);
+  }
 
   const fetchAndShow = async (): Promise<void> => {
     await vscode.window.withProgress(
