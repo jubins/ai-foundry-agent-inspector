@@ -1,86 +1,118 @@
 # AI Foundry Agent Inspector
 
-**Inspect Azure AI Foundry agent traces without leaving VS Code.**
+**Debug Azure AI Foundry agents without leaving VS Code. Free, open source.**
 
-See exactly what your agent did on every run — which tools it called, what it sent and received, and how many tokens each LLM turn cost — all in an interactive timeline panel.
+Paste a response ID once — then explore every LLM turn, tool call, token count, and timing right inside your editor. No browser tab switching.
 
-![Timeline view showing LLM turns, tool calls, and token chart](images/screenshot-timeline.png)
+> **This extension is completely free.** No account, no subscription, no telemetry.
+
+<!--
+  SCREENSHOT: Main trace panel open with Trajectories tab visible and spans expanded.
+  Recommended: 1280×800 window, 2x Retina capture.
+  Save to: images/screenshot-timeline.png
+-->
+<!-- ![Trace timeline showing Session → Invoke Agent → Chat and tool spans](images/screenshot-timeline.png) -->
 
 ---
 
-## Why
+## What it does
 
-The Foundry portal shows traces, but switching between your editor and a browser tab breaks your flow. This extension brings the same trace data into VS Code so you can debug agent behavior while you're looking at the code that produced it.
+**AI Foundry Agent Inspector** connects to your Azure AI Foundry project and gives you three views for every agent run:
+
+### Trajectories
+A Gantt-style span tree — Session → Invoke Agent → Chat + Tool calls — with per-span duration, token counts, and cost. Click any span to expand its detail drawer showing model, status, token breakdown, and raw input/output.
+
+### User View
+A chat-bubble replay of the conversation: user messages and assistant replies rendered as a readable timeline, with the agent name, model, and a "View Trace" button on each assistant turn that jumps you directly to the corresponding response in the sidebar.
+
+### Token & Cost chart
+A stacked bar chart (input vs output tokens per LLM turn) so you can spot the expensive turns at a glance.
+
+<!--
+  SCREENSHOT: Trajectories tab with Session > Invoke Agent > Chat span tree expanded.
+  Save to: images/screenshot-trajectories.png
+-->
+<!-- ![Trajectories tab showing span tree with duration bars](images/screenshot-trajectories.png) -->
 
 ---
 
 ## Features
 
-- **Interactive trace timeline** — collapsible LLM turns, tool calls with JSON input/output, user and assistant messages, all in one panel
-- **Token usage chart** — stacked bar chart showing input vs output tokens per LLM turn, so you can spot expensive turns at a glance
-- **Saved response IDs** — paste a `resp_...` ID once; the extension remembers it and pre-selects it every time after
-- **API key or Entra ID auth** — works with an API key stored in VS Code SecretStorage, or `DefaultAzureCredential` (`az login`, managed identity)
-- **One-click refresh** — re-fetch the latest trace without reopening the panel
+- **Sidebar panel** — tracked conversations and responses live in the Activity Bar; click any response to open its trace; click any conversation to filter its responses
+- **Trajectories view** — collapsible span tree with Gantt bars, duration, tokens, and cost per span
+- **User View** — readable chat-bubble replay of the full conversation with agent name on each turn
+- **Token chart** — input vs output tokens per LLM turn, one bar per call
+- **"View Trace" deep link** — click from any assistant bubble in User View to jump to that exact response in the sidebar (highlighted automatically)
+- **Saved response IDs** — paste a `resp_...` ID once; it's remembered and auto-selected next time
+- **Conversation tracking** — `conv_...` IDs are discovered automatically from your saved responses; filter the sidebar by conversation
+- **One-click refresh** — re-fetches all data without reopening the panel
+- **API key or Entra ID auth** — API key stored in VS Code SecretStorage, or `DefaultAzureCredential` (`az login`, managed identity)
+- **Respects your VS Code theme** — light, dark, and high-contrast all work
 
 ---
 
 ## Getting started
 
-### 1. Install prerequisites
+### 1. Install
 
-- VS Code 1.85+
-- An [Azure AI Foundry](https://ai.azure.com) project with at least one agent
-- Node.js 18+ (for development only)
+Search **"AI Foundry Agent Inspector"** in the VS Code Extensions panel, or install from the [Marketplace page](https://marketplace.visualstudio.com/items?itemName=jubinsoni.ai-foundry-agent-inspector).
 
-### 2. Configure the extension
+### 2. Configure
 
-Open Settings (`Cmd/Ctrl+,`) and search for **AI Foundry Agent Inspector**, or go to `Cmd/Ctrl+Shift+P` → **Preferences: Open Settings (UI)**.
+Click the **AI Foundry Inspector** icon in the Activity Bar (left sidebar), then click the **⚙ gear** button to open the setup panel.
 
-| Setting | What to put here |
+You need two things:
+
+| Setting | Where to find it |
 |---|---|
-| `Project Endpoint` | Your Foundry project endpoint — found in the portal under your project → Overview |
-| `Auth Method` | `apiKey` if you have an API key, `entraId` if you use `az login` |
+| **Project Endpoint** | Foundry portal → your project → Overview → "Project endpoint" |
+| **Auth Method** | `apiKey` (paste a key) or `entraId` (`az login` / managed identity) |
 
-![Settings panel showing projectEndpoint and authMethod fields](images/screenshot-settings.png)
+If using an API key, click **Set API Key** in the setup panel — your key is stored in VS Code's encrypted SecretStorage and never written to `settings.json`.
 
-> **Finding your endpoint:** In the Foundry portal, open your project → Overview → copy the value labelled "Project endpoint". It looks like `https://<hub>.services.ai.azure.com/api/projects/<project>`.
+<!--
+  SCREENSHOT: VS Code Settings UI showing the AI Foundry Agent Inspector section.
+  Save to: images/screenshot-settings.png
+-->
+<!-- ![Settings panel showing projectEndpoint and authMethod fields](images/screenshot-settings.png) -->
 
-### 3. Store your API key (API key auth only)
+### 3. Add a response ID
 
-1. Set `Auth Method` to `apiKey`
-2. Run `Cmd/Ctrl+Shift+P` → **Foundry Trace: Set API Key**
-3. Paste your key — it is stored in VS Code's built-in **SecretStorage**, never written to disk or `settings.json`
+1. In the Foundry portal, open your agent → **Traces** tab → click a trace
+2. Copy the `resp_...` ID from the URL or detail pane
+3. In VS Code, click **+** next to **Responses** in the sidebar and paste the ID
 
-### 4. Show a trace
+The extension fetches the trace and displays it immediately.
 
-1. In the Foundry portal, open your agent → **Traces** tab → click any trace → copy the `resp_...` response ID from the URL or detail panel
+<!--
+  SCREENSHOT: The sidebar showing Conversations and Responses sections with real data.
+  Save to: images/screenshot-sidebar.png
+-->
+<!-- ![Sidebar showing Conversations and Responses sections with real entries](images/screenshot-sidebar.png) -->
 
-![Foundry portal Traces tab with response ID highlighted](images/screenshot-portal-traces.png)
+### 4. Explore the trace
 
-2. In VS Code: `Cmd/Ctrl+Shift+P` → **Foundry Trace: Show Trace**
-3. First time: pick **Add new response ID…** and paste the ID. It saves automatically.
-4. Every time after: your saved IDs are pre-selected — just press **Enter**
+Click any response in the sidebar to open the trace panel. Switch between:
 
-![QuickPick showing saved response IDs pre-selected](images/screenshot-quickpick.png)
+- **Trajectories** — span tree with timing bars
+- **User View** — readable conversation with "View Trace" buttons
+- **Duration / Tokens / Cost** — per-span breakdown
 
-The trace panel opens and shows the full conversation:
-
-![Trace panel showing a completed session with token chart and expanded tool call](images/screenshot-trace-detail.png)
+<!--
+  SCREENSHOT: Trace panel open on the User View tab, showing assistant bubbles with agent name.
+  Save to: images/screenshot-trace-detail.png
+-->
+<!-- ![Trace panel showing User View with chat bubbles and agent name](images/screenshot-trace-detail.png) -->
 
 ---
 
-## The trace panel
+## Screenshots to add
 
-![Annotated trace panel](images/screenshot-annotated.png)
-
-| Element | What it shows |
-|---|---|
-| 🧠 **LLM Turn** | One call to the model — expand to see any tool calls made |
-| 🔧 **Tool Call** | A function the agent invoked — expand to see the JSON input and output |
-| 👤 **User** | The message that triggered this response |
-| 🤖 **Assistant** | The agent's reply |
-| **Token chart** | Stacked bar: blue = input tokens, teal = output tokens, one bar per LLM turn |
-| **Refresh** | Re-fetches all saved response IDs and updates the panel |
+> The screenshots above are placeholders — actual images coming soon. In the meantime, here is what each view looks like:
+>
+> - **Trajectories**: A tree of colored span rows (purple Session → blue Invoke Agent → teal Chat → orange Tool), each with a proportional timing bar and token/cost stats on hover
+> - **User View**: Chat bubbles showing user messages (right-aligned) and assistant replies (left-aligned) with the agent name and model shown above each assistant bubble
+> - **Token chart**: Stacked horizontal bars, one per LLM turn, blue = input tokens, teal = output tokens
 
 ---
 
@@ -88,34 +120,44 @@ The trace panel opens and shows the full conversation:
 
 | Command | Description |
 |---|---|
-| `Foundry Trace: Show Trace` | Open the trace timeline for saved response IDs |
-| `Foundry Trace: Connect to Project` | Validate connection — lists your agents in the output channel |
-| `Foundry Trace: List Recent Runs` | Dump agents and sessions as raw JSON (useful for debugging) |
+| `AI Foundry: Setup / Configure` | Open the setup panel to enter your endpoint and API key |
+| `AI Foundry: Refresh` | Re-fetch all tracked responses and update the sidebar |
+| `AI Foundry: Add Response ID` | Paste a `resp_...` ID to track it |
+| `AI Foundry: Add Conversation ID` | Paste a `conv_...` ID to track it |
+| `AI Foundry: Open Response` | Open the trace panel for a specific response |
 | `Foundry Trace: Set API Key` | Store an API key securely in SecretStorage |
 | `Foundry Trace: Clear API Key` | Remove the stored API key |
 
 ---
 
-## How response IDs work
+## How it works
 
-Azure AI Foundry uses OpenAI's Responses API internally. Each agent reply creates a `resp_...` response ID, visible in the portal Traces tab. This extension fetches those responses directly via the same API.
+Azure AI Foundry agents use the OpenAI Responses API internally. Every agent reply creates a `resp_...` response ID visible in the Foundry portal Traces tab. This extension fetches those responses directly via the same API and reconstructs the full conversation timeline locally — no intermediate server, no data leaves your machine except the API calls to your own Foundry endpoint.
 
-When a conversation spans multiple turns, each response links to the previous one via `previous_response_id`. Load any response in a chain and the extension reconstructs the full session automatically.
+When a session spans multiple turns, each response links to the previous one via `previous_response_id`. Load any response in the chain and the extension walks the chain automatically.
 
-There is no public API to list response IDs — you copy them from the portal once, and the extension remembers them from there.
+Conversation IDs (`conv_...`) are discovered automatically from your saved responses — you don't need to add them manually unless you want to track a conversation before you have any of its response IDs.
 
 ---
 
 ## Requirements
 
-- VS Code 1.85+
+- VS Code 1.85 or later
 - An Azure AI Foundry project with at least one agent
-- API key **or** Azure CLI (`az login`) for authentication
+- An API key **or** Azure CLI (`az login`) / managed identity for authentication
+
+---
+
+## Privacy
+
+This extension makes API calls only to the Azure AI Foundry endpoint you configure. No usage data, telemetry, or trace content is sent anywhere else.
+
+---
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) — free to use, modify, and distribute.
 
 ## Contributing
 
-Issues and discussion welcome at [github.com/jubins/ai-foundry-agent-inspector](https://github.com/jubins/ai-foundry-agent-inspector/issues).
+Issues and pull requests welcome at [github.com/jubins/ai-foundry-agent-inspector](https://github.com/jubins/ai-foundry-agent-inspector/issues).
