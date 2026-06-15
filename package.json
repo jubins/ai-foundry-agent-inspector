@@ -2,7 +2,7 @@
   "name": "foundry-trace-inspector",
   "displayName": "Foundry Trace Inspector",
   "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
   "repository": {
@@ -182,13 +182,17 @@
         },
         "aiFoundryAgentInspector.responseIds": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "markdownDescription": "List of response IDs (`resp_...`) tracked in the sidebar. Find these in the Foundry portal Agents → your agent → Traces tab."
         },
         "aiFoundryAgentInspector.conversationIds": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "markdownDescription": "List of conversation IDs (`conv_...`) tracked in the sidebar. These are extracted automatically from saved responses, or can be added manually."
         }
@@ -196,7 +200,8 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -211,6 +216,7 @@
     "@typescript-eslint/parser": "^7.0.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.28.1",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
   },
