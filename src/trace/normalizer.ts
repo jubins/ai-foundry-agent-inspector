@@ -171,12 +171,19 @@ function normalizeResponseChain(
 
     // Parse output items
     const toolCallMap = new Map<string, ToolCallStep>();
+    const completedAt = (response as unknown as { completed_at?: number | null }).completed_at;
+    const durationMs = (completedAt && response.created_at)
+      ? (completedAt - response.created_at) * 1000
+      : undefined;
+
     const llmStep: LlmStep = {
       kind: "llm",
       id: response.id,
       model: response.model,
       status: responseStatus(response.status),
       startedAt: isoFromUnix(response.created_at),
+      completedAt: completedAt ? isoFromUnix(completedAt) : undefined,
+      durationMs,
       toolCalls: [],
       responseId,
       traceId,

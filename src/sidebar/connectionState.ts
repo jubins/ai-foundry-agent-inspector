@@ -17,6 +17,7 @@ export interface ResponseSummary {
   status?: string;
   model?: string;
   createdAt?: number;
+  conversationId?: string;  // conv_... that owns this response
 }
 
 export type ConnectionStatus = "unconfigured" | "connecting" | "connected" | "error";

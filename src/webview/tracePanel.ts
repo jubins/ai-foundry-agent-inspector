@@ -2,15 +2,20 @@ import * as vscode from "vscode";
 import type { TraceAgent } from "../trace/model";
 
 let currentPanel: vscode.WebviewPanel | undefined;
+let _onRevealSidebar: ((responseId: string) => void) | undefined;
 
 export function showTracePanel(
   context: vscode.ExtensionContext,
   agents: TraceAgent[],
-  onRefresh: () => Promise<void>
+  onRefresh: () => Promise<void>,
+  highlightResponseId?: string,
+  onRevealSidebar?: (responseId: string) => void
 ): void {
+  if (onRevealSidebar) { _onRevealSidebar = onRevealSidebar; }
+
   if (currentPanel) {
     currentPanel.reveal(vscode.ViewColumn.One);
-    currentPanel.webview.postMessage({ type: "update", agents });
+    currentPanel.webview.postMessage({ type: "update", agents, highlightResponseId });
     return;
   }
 
@@ -40,6 +45,8 @@ export function showTracePanel(
       }
       await vscode.commands.executeCommand("foundryInspector.silentRefresh");
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
+      // Reveal after a tick so the tree has re-rendered and cache is populated
+      setTimeout(() => { if (_onRevealSidebar) { _onRevealSidebar(respId); } }, 200);
     }
   }, null, context.subscriptions);
 
@@ -399,6 +406,7 @@ function buildHtml(agents: TraceAgent[]): string {
     text-transform: capitalize; letter-spacing: 0.02em;
   }
   .kind-conversation { background: #7b52ab30; color: #c586c0; border: 1px solid #7b52ab50; }
+  .kind-session      { background: #7b52ab30; color: #c586c0; border: 1px solid #7b52ab50; }
   .kind-invoke       { background: #0078d430; color: #569cd6; border: 1px solid #0078d450; }
   .kind-chat         { background: #008c6630; color: #4ec9b0; border: 1px solid #008c6650; }
   .kind-tool         { background: #7c6300; color: #dcdcaa; border: 1px solid #dcdcaa40; }
@@ -432,6 +440,7 @@ function buildHtml(agents: TraceAgent[]): string {
     opacity: 0.85;
   }
   .bar-conversation { background: #7b52abcc; }
+  .bar-session      { background: #7b52abcc; }
   .bar-invoke       { background: #0078d4cc; }
   .bar-chat         { background: #4ec9b0cc; }
   .bar-tool         { background: #dcdcaa99; }
@@ -602,12 +611,12 @@ function buildHtml(agents: TraceAgent[]): string {
     return wrapper;
   }
 
-  function renderAssistantBubble(step, llmStep, showViewTrace) {
+  function renderAssistantBubble(step, llmStep, showViewTrace, agentNameFallback) {
     const bubble = el('div', {'class': 'bubble-assistant'});
     bubble.appendChild(document.createTextNode(step.content || '(empty)'));
     const agentLabel = llmStep?.agentName
       ? \`\${llmStep.agentName}\${llmStep.agentVersion ? ' v' + llmStep.agentVersion : ''}\`
-      : 'AI Assistant';
+      : (agentNameFallback || 'AI Assistant');
     const wrapper = el('div', {'class': 'bubble-wrapper bubble-wrapper-assistant'});
     wrapper.appendChild(el('div', {'class': 'bubble-role'}, agentLabel));
     wrapper.appendChild(bubble);
@@ -636,7 +645,7 @@ function buildHtml(agents: TraceAgent[]): string {
     return wrapper;
   }
 
-  function renderStepsAsTurns(steps, showViewTrace) {
+  function renderStepsAsTurns(steps, showViewTrace, agentNameFallback) {
     const turns = [];
     let current = null;
     for (const step of steps) {
@@ -680,13 +689,13 @@ function buildHtml(agents: TraceAgent[]): string {
           pillRow, ...details
         ));
       }
-      if (turn.assistant) { children.push(renderAssistantBubble(turn.assistant, turn.llm, showViewTrace)); }
+      if (turn.assistant) { children.push(renderAssistantBubble(turn.assistant, turn.llm, showViewTrace, agentNameFallback)); }
       nodes.push(el('div', {'class': 'chat-turn'}, ...children));
     });
     return nodes.filter(Boolean);
   }
 
-  function renderSession(session) {
+  function renderSession(session, agentNameFallback) {
     const badgeCls = 'badge badge-' + session.status;
     const sessionCls = 'session status-' + session.status;
     const tokenInfo = session.totalTokens
@@ -703,7 +712,7 @@ function buildHtml(agents: TraceAgent[]): string {
     if (session.steps.length === 0) {
       stepsEl = el('div', {'class': 'no-steps'}, 'No steps — start a conversation with the agent to generate trace data.');
     } else if (hasChatSteps) {
-      stepsEl = el('div', {'class': 'steps'}, ...renderStepsAsTurns(session.steps, showViewTrace));
+      stepsEl = el('div', {'class': 'steps'}, ...renderStepsAsTurns(session.steps, showViewTrace, agentNameFallback));
     } else {
       stepsEl = el('div', {'class': 'no-steps'}, 'No chat messages in this trace.');
     }
@@ -724,7 +733,7 @@ function buildHtml(agents: TraceAgent[]): string {
     if (agent.sessions.length === 0) {
       body.appendChild(el('div', {'class': 'no-sessions'}, 'No sessions found.'));
     } else {
-      agent.sessions.forEach(s => body.appendChild(renderSession(s)));
+      agent.sessions.forEach(s => body.appendChild(renderSession(s, agent.name)));
     }
     const meta = [agent.model, agent.version ? \`v\${agent.version}\` : null].filter(Boolean).join(' · ');
     const header = el('div', {'class': 'agent-header'},
@@ -786,7 +795,7 @@ function buildHtml(agents: TraceAgent[]): string {
         const isConv = session.source === 'conversation';
         const rootSpan = {
           id: session.id,
-          kind: isConv ? 'conversation' : 'invoke',
+          kind: isConv ? 'conversation' : 'session',
           name: isConv ? session.id.slice(0, 28) + (session.id.length > 28 ? '…' : '') : (agent.name || 'Session'),
           model: agent.model ?? null,
           status: session.status,
@@ -805,7 +814,8 @@ function buildHtml(agents: TraceAgent[]): string {
 
           // "Invoke Agent" span per turn (or just the agent name)
           const invokeStart = llm?.startedAt ? new Date(llm.startedAt).getTime() : null;
-          // We don't have invoke end separately — approximate from next turn start or use llm start
+          const invokeDurMs = llm?.durationMs ?? null;
+          const invokeEnd = (invokeStart != null && invokeDurMs != null) ? invokeStart + invokeDurMs : invokeStart;
           const invokeSpan = {
             id: \`invoke-\${session.id}-\${i}\`,
             kind: 'invoke',
@@ -813,7 +823,8 @@ function buildHtml(agents: TraceAgent[]): string {
             model: null,
             status: llm?.status ?? 'completed',
             startMs: invokeStart,
-            endMs: invokeStart,  // will be extended after we know children
+            endMs: invokeEnd,
+            durationMs: invokeDurMs,
             tokens: llm?.tokenUsage ?? null,
             content: null,
             responseId: llm?.responseId ?? null,
@@ -861,6 +872,8 @@ function buildHtml(agents: TraceAgent[]): string {
           // Chat (LLM) child
           if (turn.assistant || llm) {
             const chatStart = llm?.startedAt ? new Date(llm.startedAt).getTime() : null;
+            const chatDurMs = llm?.durationMs ?? null;
+            const chatEnd = (chatStart != null && chatDurMs != null) ? chatStart + chatDurMs : chatStart;
             invokeSpan.children.push({
               id: \`chat-\${session.id}-\${i}\`,
               kind: 'chat',
@@ -868,7 +881,8 @@ function buildHtml(agents: TraceAgent[]): string {
               model: llm?.model ?? agent.model ?? null,
               status: llm?.status ?? 'completed',
               startMs: chatStart,
-              endMs: chatStart,
+              endMs: chatEnd,
+              durationMs: chatDurMs,
               tokens: llm?.tokenUsage ?? null,
               content: turn.assistant?.content ?? '',
               responseId: llm?.responseId ?? null,
@@ -879,10 +893,13 @@ function buildHtml(agents: TraceAgent[]): string {
 
           rootSpan.children.push(invokeSpan);
 
-          // Accumulate timing on root
+          // Accumulate timing on root — span from earliest start to latest end
           if (invokeStart) {
             if (!rootSpan.startMs || invokeStart < rootSpan.startMs) { rootSpan.startMs = invokeStart; }
-            if (!rootSpan.endMs || invokeStart > rootSpan.endMs) { rootSpan.endMs = invokeStart; }
+          }
+          const invokeEndForRoot = invokeEnd ?? invokeStart;
+          if (invokeEndForRoot) {
+            if (!rootSpan.endMs || invokeEndForRoot > rootSpan.endMs) { rootSpan.endMs = invokeEndForRoot; }
           }
         }
 
@@ -957,6 +974,21 @@ function buildHtml(agents: TraceAgent[]): string {
     );
     pane.appendChild(toggle);
 
+    // Legend for token/cost split bars
+    if (viewMode === 'tokens' || viewMode === 'cost') {
+      const legend = el('div', {'style': 'display:flex; align-items:center; gap:12px; padding:6px 0 2px 8px; font-size:0.78em; color:var(--vscode-descriptionForeground)'},
+        el('span', {'style': 'display:flex; align-items:center; gap:4px'},
+          el('span', {'style': 'width:10px; height:10px; background:#569cd6cc; border-radius:2px; display:inline-block'}),
+          document.createTextNode(viewMode === 'tokens' ? 'Input tokens' : 'Input cost')
+        ),
+        el('span', {'style': 'display:flex; align-items:center; gap:4px'},
+          el('span', {'style': 'width:10px; height:10px; background:#4ec9b0cc; border-radius:2px; display:inline-block'}),
+          document.createTextNode(viewMode === 'tokens' ? 'Output tokens' : 'Output cost')
+        )
+      );
+      pane.appendChild(legend);
+    }
+
     const { minMs, totalMs } = getTimeRange(trajectorySpans);
     const rows = flattenSpans(trajectorySpans);
 
@@ -981,6 +1013,7 @@ function buildHtml(agents: TraceAgent[]): string {
       // Kind badge
       const kindLabel = {
         conversation: 'Conversation',
+        session: 'Session',
         invoke: 'Invoke Agent',
         chat: 'Chat',
         tool: 'Execute Tool',
@@ -988,12 +1021,22 @@ function buildHtml(agents: TraceAgent[]): string {
       }[span.kind] ?? span.kind;
       const kindBadge = el('span', {'class': 'span-kind kind-' + span.kind}, kindLabel);
 
-      // Status dot
-      const dot = el('div', {'class': 'span-status status-dot-' + span.status});
+      // Status dot — only for spans with meaningful execution status (not root or user messages)
+      const showDot = span.kind === 'chat' || span.kind === 'tool' || span.kind === 'invoke';
+      const dot = showDot ? el('div', {'class': 'span-status status-dot-' + span.status}) : null;
 
-      // Name
-      const nameEl = el('span', {'class': 'span-name'}, span.name);
-      const modelEl = span.model ? el('span', {'class': 'span-model'}, span.model) : null;
+      // Name — strip redundant prefix from span.name so model isn't duplicated in modelEl
+      const rawName = span.name ?? '';
+      // Remove "invoke_agent ", "chat ", "execute_tool " prefixes — the kind badge already conveys that
+      const displayName = rawName
+        .replace(/^invoke_agent\s+/i, '')
+        .replace(/^chat\s+/i, '')
+        .replace(/^execute_tool\s+/i, '');
+      const nameEl = el('span', {'class': 'span-name'}, displayName);
+      // Only show modelEl if model differs from the display name (avoid "gpt-4.1-mini gpt-4.1-mini")
+      const modelEl = (span.model && span.model !== displayName)
+        ? el('span', {'class': 'span-model'}, span.model)
+        : null;
 
       // Bar or tokens
       let barAreaEl, rightEl;
@@ -1004,21 +1047,25 @@ function buildHtml(agents: TraceAgent[]): string {
 
         let durLabel = '';
         if (span.startMs) {
-          const leftPct = ((span.startMs - minMs) / totalMs) * 100;
+          const leftPct = totalMs > 0 ? ((span.startMs - minMs) / totalMs) * 100 : 0;
           const rawEnd = span.endMs ?? span.startMs;
           const durMs = Math.max(rawEnd - span.startMs, 0);
-          const widthPct = Math.max((durMs / totalMs) * 100, 0.8);
+          const widthPct = totalMs > 0 ? Math.max((durMs / totalMs) * 100, 0.8) : 0.8;
           const bar = el('div', {
             'class': 'span-bar bar-' + span.kind,
             'style': \`left:\${leftPct.toFixed(2)}%; width:\${widthPct.toFixed(2)}%\`,
-            'title': fmtMs(durMs)
+            'title': durMs > 0 ? fmtMs(durMs) : (span.startMs > minMs ? '+' + fmtMs(span.startMs - minMs) : '')
           });
           barArea.appendChild(bar);
-          // Show duration if we have real end time, else show start relative to root
-          if (rawEnd > span.startMs) {
+          // Prefer real duration; fall back to offset from conversation start
+          if (durMs > 0) {
             durLabel = fmtMs(durMs);
+          } else if (span.durationMs != null && span.durationMs > 0) {
+            durLabel = fmtMs(span.durationMs);
           } else if (span.startMs > minMs) {
             durLabel = '+' + fmtMs(span.startMs - minMs);
+          } else {
+            durLabel = fmtMs(0);
           }
         }
         barAreaEl = barArea;
@@ -1084,9 +1131,8 @@ function buildHtml(agents: TraceAgent[]): string {
       const indentPad = el('div', {'class': 'span-indent', 'style': \`padding-left:\${depth * 20}px\`});
 
       const isSelected = span.id === selectedSpanId;
-      const rowEl = el('div', {'class': 'span-row' + (isSelected ? ' selected' : '')},
-        indentPad, expandBtn, kindBadge, dot, nameEl, modelEl, barAreaEl, rightEl
-      );
+      const rowChildren = [indentPad, expandBtn, kindBadge, dot, nameEl, modelEl, barAreaEl, rightEl].filter(Boolean);
+      const rowEl = el('div', {'class': 'span-row' + (isSelected ? ' selected' : '')}, ...rowChildren);
       rowEl.addEventListener('click', () => {
         selectedSpanId = span.id === selectedSpanId ? null : span.id;
         _drawTraj();
@@ -1111,14 +1157,6 @@ function buildHtml(agents: TraceAgent[]): string {
         }
         if (span.content) {
           drawer.appendChild(el('div', {'class': 'detail-content'}, span.content));
-        }
-        // View Trace button for chat spans
-        if (span.responseId && span.kind === 'chat') {
-          const btn = el('button', {'class': 'view-trace-btn', 'style': 'margin-top:10px'}, '↗ View Trace');
-          btn.addEventListener('click', () => {
-            vscode.postMessage({ type: 'viewTrace', responseId: span.responseId });
-          });
-          drawer.appendChild(btn);
         }
         pane.appendChild(drawer);
       }
@@ -1302,6 +1340,42 @@ function buildHtml(agents: TraceAgent[]): string {
       render(e.data.agents);
       setLoading(false);
       document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      if (e.data.highlightResponseId) {
+        // Switch to Trajectories tab and select the matching span
+        switchTab('traj');
+        const respId = e.data.highlightResponseId;
+        // Find and select the chat span with this responseId
+        const allSpans = [];
+        function collectSpans(spans) {
+          for (const s of spans) {
+            allSpans.push(s);
+            if (s.children) collectSpans(s.children);
+          }
+        }
+        collectSpans(trajectorySpans);
+        const match = allSpans.find(s => s.responseId === respId);
+        if (match) {
+          selectedSpanId = match.id;
+          // Expand ancestors
+          function expandToSpan(spans, targetId) {
+            for (const s of spans) {
+              if (s.id === targetId) return true;
+              if (s.children && expandToSpan(s.children, targetId)) {
+                s.expanded = true;
+                return true;
+              }
+            }
+            return false;
+          }
+          expandToSpan(trajectorySpans, match.id);
+          _drawTraj();
+          // Scroll highlighted row into view after render
+          setTimeout(() => {
+            const sel = document.querySelector('.span-row.selected');
+            if (sel) sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 50);
+        }
+      }
     } else if (e.data?.type === 'loading') {
       setLoading(true);
     }
