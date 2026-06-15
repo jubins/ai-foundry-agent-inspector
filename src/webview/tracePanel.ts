@@ -50,13 +50,13 @@ export function showTracePanel(
       if (!state.responses.find(r => r.id === respId)) {
         setConnectionState({ responses: [...state.responses, { id: respId }] });
       }
-      // Open the individual response trace, then reveal in sidebar
+      // Open the individual response trace (sets _onRevealSidebar via showTracePanel)
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
+      // Hydrate full metadata, then reveal — ensures the tree item exists in the cache before reveal
+      await vscode.commands.executeCommand("foundryInspector.silentRefresh");
       setTimeout(() => {
         if (_onRevealSidebar) { _onRevealSidebar(respId); }
-      }, 400);
-      // Hydrate full metadata in the background
-      vscode.commands.executeCommand("foundryInspector.silentRefresh");
+      }, 200);
     }
   }, null, context.subscriptions);
 
