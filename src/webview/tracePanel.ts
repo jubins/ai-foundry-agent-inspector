@@ -1130,7 +1130,7 @@ function buildHtml(agents: TraceAgent[]): string {
           barAreaEl.appendChild(track);
           barAreaEl.appendChild(inBar);
           barAreaEl.appendChild(outBar);
-          rightEl = el('div', {'class': 'span-tokens'}, fmtCost(spanCost));
+          rightEl = el('div', {'class': 'span-tokens span-cost-split'}, fmtCost(spanCost));
         } else {
           barAreaEl.appendChild(el('div', {'class': 'span-bar-track'}));
           rightEl = el('div', {'class': 'span-tokens'}, spanCost === 0 ? '—' : '');
@@ -1164,6 +1164,12 @@ function buildHtml(agents: TraceAgent[]): string {
         if (span.model) { addRow('Model', span.model); }
         if (span.tokens) {
           addRow('Tokens', \`\${span.tokens.input} in + \${span.tokens.output} out = \${span.tokens.total} total\`);
+          const _tp = lookupPricing(span.model);
+          if (_tp) {
+            const _inCost  = (span.tokens.input  / 1_000_000) * _tp.input;
+            const _outCost = (span.tokens.output / 1_000_000) * _tp.output;
+            addRow('Cost', \`\${fmtCost(_inCost)} in + \${fmtCost(_outCost)} out = \${fmtCost(_inCost + _outCost)} total\`);
+          }
         }
         if (span.content) {
           drawer.appendChild(el('div', {'class': 'detail-content'}, span.content));
