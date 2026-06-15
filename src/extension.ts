@@ -14,9 +14,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Sidebar tree ───────────────────────────────────────────────────────────
   const treeProvider = new FoundryTreeProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("foundryInspector.sidebar", treeProvider)
-  );
+  const treeView = vscode.window.createTreeView("foundryInspector.sidebar", {
+    treeDataProvider: treeProvider,
+    showCollapseAll: false,
+  });
+  context.subscriptions.push(treeView);
+  treeProvider.setTreeView(treeView);
 
   // Auto-load on activation if already configured
   loadConnectionData(context, out).catch(() => {});
@@ -56,7 +59,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "foundryInspector.openResponse",
       (resp: ResponseSummary) => {
-        showTrace(context, secrets, out, { responseId: resp.id });
+        showTrace(context, secrets, out, {
+          responseId: resp.id,
+          onRevealSidebar: (rid) => treeProvider.revealResponseId(rid),
+        });
       }
     ),
 

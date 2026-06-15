@@ -46,7 +46,34 @@ export class FoundryTreeProvider
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private _selectedConvId: string | undefined;
+  private _treeView: vscode.TreeView<FoundryTreeItem> | undefined;
+  // Cache vended items so reveal() can find the exact same object instance
+  private _responseItemCache = new Map<string, FoundryTreeItem>();
+  private _sectionResponsesItem: FoundryTreeItem | undefined;
+
   get selectedConvId(): string | undefined { return this._selectedConvId; }
+
+  setTreeView(view: vscode.TreeView<FoundryTreeItem>): void {
+    this._treeView = view;
+  }
+
+  revealResponseId(responseId: string): void {
+    if (!this._treeView) { return; }
+    const cached = this._responseItemCache.get(responseId);
+    if (!cached) { return; }
+    this._treeView.reveal(cached, { select: true, focus: false, expand: true });
+  }
+
+  // Required by TreeView.reveal() for non-root items
+  getParent(element: FoundryTreeItem): FoundryTreeItem | undefined {
+    if (element.kind === "response" || element.kind === "hint" || element.kind === "action") {
+      return this._sectionResponsesItem;
+    }
+    if (element.kind === "conversation") {
+      return undefined; // conversations are under a section but we return undefined to keep it simple
+    }
+    return undefined;
+  }
 
   constructor(private readonly context: vscode.ExtensionContext) {
     onDidChangeConnection(() => this._onDidChangeTreeData.fire());
@@ -170,6 +197,7 @@ export class FoundryTreeProvider
       ? `Showing responses for selected conversation. Click a different conversation to filter, or click the same one again to clear.`
       : "All tracked responses. Click a conversation above to filter.";
 
+    this._sectionResponsesItem = respSection;
     return [convSection, respSection];
   }
 
@@ -234,6 +262,9 @@ export class FoundryTreeProvider
       ? responses.filter(r => r.conversationId === this._selectedConvId)
       : responses;
 
+    // Rebuild cache so revealResponseId() can find the exact vended instances
+    this._responseItemCache.clear();
+
     if (visible.length === 0 && responses.length === 0) {
       const hint = new FoundryTreeItem(
         "No responses tracked yet",
@@ -285,6 +316,7 @@ export class FoundryTreeProvider
         title: "Open Response",
         arguments: [resp],
       };
+      this._responseItemCache.set(resp.id, item);
       return item;
     });
 

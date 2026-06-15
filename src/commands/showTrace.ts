@@ -9,8 +9,9 @@ import type { OutputChannel } from "../outputChannel";
 import type { AIProjectClient } from "@azure/ai-projects";
 
 export interface ShowTraceOptions {
-  responseId?: string;       // pre-selected from sidebar
-  conversationId?: string;   // pre-selected from sidebar (future: conv flow)
+  responseId?: string;
+  conversationId?: string;
+  onRevealSidebar?: (responseId: string) => void;
 }
 
 export async function showTrace(
@@ -141,7 +142,7 @@ export async function showTrace(
           out.appendLine(`\nRaw response data:\n${JSON.stringify(responses, null, 2)}`);
 
           const traceAgents = normalizeFromResponses(responses);
-          showTracePanel(context, traceAgents, fetchAndShow);
+          showTracePanel(context, traceAgents, fetchAndShow, options?.responseId, options?.onRevealSidebar);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           out.appendLine(`Show Trace error: ${message}`);
