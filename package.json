@@ -38,6 +38,10 @@
       {
         "command": "foundryTrace.clearApiKey",
         "title": "Foundry Trace: Clear API Key"
+      },
+      {
+        "command": "foundryTrace.showTrace",
+        "title": "Foundry Trace: Show Trace"
       }
     ],
     "configuration": {
@@ -67,6 +71,12 @@
           "minimum": 1,
           "maximum": 100,
           "description": "Maximum number of recent runs to fetch when listing runs"
+        },
+        "aiFoundryAgentInspector.responseIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "List of response IDs (`resp_...`) to fetch when running \"Foundry Trace: Show Trace\". Find these in the Foundry portal Agents → your agent → Traces tab."
         }
       }
     }

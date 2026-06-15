@@ -3,6 +3,7 @@ import { getOutputChannel, disposeOutputChannel } from "./outputChannel";
 import { connectToProject } from "./commands/connect";
 import { listRecentRuns } from "./commands/listRuns";
 import { setApiKey, clearApiKey } from "./commands/apiKey";
+import { showTrace } from "./commands/showTrace";
 
 export function activate(context: vscode.ExtensionContext): void {
   const out = getOutputChannel();
@@ -20,6 +21,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand("foundryTrace.clearApiKey", () =>
       clearApiKey(secrets)
+    ),
+    vscode.commands.registerCommand("foundryTrace.showTrace", () =>
+      showTrace(context, secrets, out)
     )
   );
 }

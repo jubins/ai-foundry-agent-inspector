@@ -6,6 +6,7 @@ export interface FoundryConfig {
   projectEndpoint: string;
   authMethod: AuthMethod;
   maxRunsToList: number;
+  responseIds: string[];
 }
 
 const SECRET_KEY = "aiFoundryAgentInspector.apiKey";
@@ -16,6 +17,7 @@ export function getConfig(): FoundryConfig {
     projectEndpoint: cfg.get<string>("projectEndpoint", "").trim(),
     authMethod: cfg.get<AuthMethod>("authMethod", "entraId"),
     maxRunsToList: cfg.get<number>("maxRunsToList", 20),
+    responseIds: cfg.get<string[]>("responseIds", []),
   };
 }
 
