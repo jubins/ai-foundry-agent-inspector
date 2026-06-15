@@ -4,6 +4,20 @@
   "description": "Visualize and debug Azure AI Foundry Agent Service runs directly in VS Code",
   "version": "0.1.0",
   "publisher": "jubinsoni",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector"
+  },
+  "homepage": "https://github.com/jubins/ai-foundry-agent-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector/issues"
+  },
+  "license": "MIT",
+  "galleryBanner": {
+    "color": "#0078D4",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,7 +31,9 @@
     "foundry",
     "agent",
     "trace",
-    "debug"
+    "debug",
+    "llm",
+    "openai"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",

@@ -16,3 +16,5 @@ node_modules/@vscode/test-electron
 node_modules/@types
 node_modules/mocha
 tsconfig.json
+memory/**
+.claude/**
