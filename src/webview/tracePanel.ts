@@ -609,12 +609,12 @@ function buildHtml(agents: TraceAgent[]): string {
     return wrapper;
   }
 
-  function renderAssistantBubble(step, llmStep, showViewTrace) {
+  function renderAssistantBubble(step, llmStep, showViewTrace, agentNameFallback) {
     const bubble = el('div', {'class': 'bubble-assistant'});
     bubble.appendChild(document.createTextNode(step.content || '(empty)'));
     const agentLabel = llmStep?.agentName
       ? \`\${llmStep.agentName}\${llmStep.agentVersion ? ' v' + llmStep.agentVersion : ''}\`
-      : 'AI Assistant';
+      : (agentNameFallback || 'AI Assistant');
     const wrapper = el('div', {'class': 'bubble-wrapper bubble-wrapper-assistant'});
     wrapper.appendChild(el('div', {'class': 'bubble-role'}, agentLabel));
     wrapper.appendChild(bubble);
@@ -643,7 +643,7 @@ function buildHtml(agents: TraceAgent[]): string {
     return wrapper;
   }
 
-  function renderStepsAsTurns(steps, showViewTrace) {
+  function renderStepsAsTurns(steps, showViewTrace, agentNameFallback) {
     const turns = [];
     let current = null;
     for (const step of steps) {
@@ -687,13 +687,13 @@ function buildHtml(agents: TraceAgent[]): string {
           pillRow, ...details
         ));
       }
-      if (turn.assistant) { children.push(renderAssistantBubble(turn.assistant, turn.llm, showViewTrace)); }
+      if (turn.assistant) { children.push(renderAssistantBubble(turn.assistant, turn.llm, showViewTrace, agentNameFallback)); }
       nodes.push(el('div', {'class': 'chat-turn'}, ...children));
     });
     return nodes.filter(Boolean);
   }
 
-  function renderSession(session) {
+  function renderSession(session, agentNameFallback) {
     const badgeCls = 'badge badge-' + session.status;
     const sessionCls = 'session status-' + session.status;
     const tokenInfo = session.totalTokens
@@ -710,7 +710,7 @@ function buildHtml(agents: TraceAgent[]): string {
     if (session.steps.length === 0) {
       stepsEl = el('div', {'class': 'no-steps'}, 'No steps — start a conversation with the agent to generate trace data.');
     } else if (hasChatSteps) {
-      stepsEl = el('div', {'class': 'steps'}, ...renderStepsAsTurns(session.steps, showViewTrace));
+      stepsEl = el('div', {'class': 'steps'}, ...renderStepsAsTurns(session.steps, showViewTrace, agentNameFallback));
     } else {
       stepsEl = el('div', {'class': 'no-steps'}, 'No chat messages in this trace.');
     }
@@ -731,7 +731,7 @@ function buildHtml(agents: TraceAgent[]): string {
     if (agent.sessions.length === 0) {
       body.appendChild(el('div', {'class': 'no-sessions'}, 'No sessions found.'));
     } else {
-      agent.sessions.forEach(s => body.appendChild(renderSession(s)));
+      agent.sessions.forEach(s => body.appendChild(renderSession(s, agent.name)));
     }
     const meta = [agent.model, agent.version ? \`v\${agent.version}\` : null].filter(Boolean).join(' · ');
     const header = el('div', {'class': 'agent-header'},
