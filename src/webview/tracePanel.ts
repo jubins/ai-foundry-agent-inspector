@@ -38,15 +38,18 @@ export function showTracePanel(
     } else if (msg.type === "viewTrace") {
       const respId: string = msg.responseId;
       if (!respId) { return; }
+      // Save to settings so it appears in the Responses sidebar
       const cfg = vscode.workspace.getConfiguration("aiFoundryAgentInspector");
       const existing = cfg.get<string[]>("responseIds", []);
       if (!existing.includes(respId)) {
         await cfg.update("responseIds", [...existing, respId], vscode.ConfigurationTarget.Global);
       }
+      // Refresh sidebar then open the individual response trace and reveal in sidebar
       await vscode.commands.executeCommand("foundryInspector.silentRefresh");
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
-      // Reveal after a tick so the tree has re-rendered and cache is populated
-      setTimeout(() => { if (_onRevealSidebar) { _onRevealSidebar(respId); } }, 200);
+      setTimeout(() => {
+        if (_onRevealSidebar) { _onRevealSidebar(respId); }
+      }, 400);
     }
   }, null, context.subscriptions);
 

@@ -335,6 +335,20 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
   </div>
 </div>
 
+<!-- Disconnect -->
+<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--vscode-panel-border, #444);">
+  <p class="hint" style="margin-bottom: 10px;">Remove your saved endpoint and API key to disconnect from this project.</p>
+  <div id="disconnectConfirm" style="display:none; margin-bottom: 10px;">
+    <p class="hint" style="margin-bottom: 8px; color: #f48771;">This will clear your saved endpoint and API key. Are you sure?</p>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" style="background:#c72e2e;" onclick="confirmDisconnect()">Yes, disconnect</button>
+      <button class="btn btn-secondary" onclick="cancelDisconnect()">Cancel</button>
+    </div>
+  </div>
+  <button class="btn btn-secondary" id="disconnectBtn" onclick="disconnect()">⊘ Disconnect / Reset</button>
+  <div class="status-msg" id="disconnectStatus" style="margin-top: 10px;"></div>
+</div>
+
 <script>
 const vscode = acquireVsCodeApi();
 
@@ -348,6 +362,22 @@ function saveEndpoint() {
 function onAuthChange(val) {
   vscode.postMessage({ type: 'saveAuthMethod', authMethod: val });
   document.getElementById('apiKeySection').classList.toggle('visible', val === 'apiKey');
+  document.getElementById('entraHint').style.display = val === 'entraId' ? '' : 'none';
+}
+
+function disconnect() {
+  document.getElementById('disconnectBtn').style.display = 'none';
+  document.getElementById('disconnectConfirm').style.display = 'block';
+}
+
+function confirmDisconnect() {
+  document.getElementById('disconnectConfirm').style.display = 'none';
+  vscode.postMessage({ type: 'disconnect' });
+}
+
+function cancelDisconnect() {
+  document.getElementById('disconnectConfirm').style.display = 'none';
+  document.getElementById('disconnectBtn').style.display = '';
 }
 
 function saveApiKey() {
@@ -408,6 +438,11 @@ window.addEventListener('message', e => {
     }
     case 'error':
       showStatus('testStatus', 'err', msg.message);
+      break;
+    case 'disconnected':
+      document.getElementById('endpointInput').value = '';
+      document.getElementById('disconnectBtn').style.display = '';
+      showStatus('disconnectStatus', 'ok', 'Disconnected. Endpoint and API key cleared.');
       break;
   }
 });
