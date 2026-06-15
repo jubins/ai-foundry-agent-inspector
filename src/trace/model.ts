@@ -35,6 +35,8 @@ export interface LlmStep {
   toolCalls: ToolCallStep[];
   responseId?: string;
   traceId?: string;
+  agentName?: string;
+  agentVersion?: string;
 }
 
 export interface MessageStep {

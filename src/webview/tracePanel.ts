@@ -31,7 +31,6 @@ export function showTracePanel(
       currentPanel?.webview.postMessage({ type: "loading" });
       await onRefresh();
     } else if (msg.type === "viewTrace") {
-      // Save response ID to settings, refresh sidebar, then open its trace
       const respId: string = msg.responseId;
       if (!respId) { return; }
       const cfg = vscode.workspace.getConfiguration("aiFoundryAgentInspector");
@@ -39,9 +38,7 @@ export function showTracePanel(
       if (!existing.includes(respId)) {
         await cfg.update("responseIds", [...existing, respId], vscode.ConfigurationTarget.Global);
       }
-      // Refresh sidebar so the new response ID appears in the Responses section
-      await vscode.commands.executeCommand("foundryInspector.refresh");
-      // Open the response trace panel — pass full ResponseSummary shape
+      await vscode.commands.executeCommand("foundryInspector.silentRefresh");
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
     }
   }, null, context.subscriptions);
@@ -49,15 +46,6 @@ export function showTracePanel(
   currentPanel.onDidDispose(() => {
     currentPanel = undefined;
   }, null, context.subscriptions);
-}
-
-function escHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 function buildHtml(agents: TraceAgent[]): string {
@@ -76,16 +64,21 @@ function buildHtml(agents: TraceAgent[]): string {
     font-size: var(--vscode-font-size, 13px);
     color: var(--vscode-foreground);
     background: var(--vscode-editor-background);
-    padding: 16px;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
+  /* ── Top toolbar ── */
   .toolbar {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 16px;
+    padding: 10px 16px 0;
+    flex-shrink: 0;
   }
-  h1 { font-size: 1.2em; font-weight: 600; }
+  h1 { font-size: 1.1em; font-weight: 600; }
 
   .refresh-btn {
     background: var(--vscode-button-background);
@@ -95,9 +88,6 @@ function buildHtml(agents: TraceAgent[]): string {
     padding: 4px 12px;
     font-size: 0.85em;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
   }
   .refresh-btn:hover { background: var(--vscode-button-hoverBackground); }
   .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -105,10 +95,68 @@ function buildHtml(agents: TraceAgent[]): string {
   .spinner { display: none; }
   .spinner.active { display: inline; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .last-updated { font-size: 0.78em; color: var(--vscode-descriptionForeground); margin-left: auto; }
-  h2 { font-size: 1em; font-weight: 600; margin: 20px 0 8px; }
-  h3 { font-size: 0.9em; font-weight: 600; margin: 12px 0 6px; color: var(--vscode-descriptionForeground); }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 10px 16px 0;
+    border-bottom: 1px solid var(--vscode-panel-border, #444);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 6px 18px;
+    cursor: pointer;
+    font-size: 0.88em;
+    font-weight: 500;
+    color: var(--vscode-descriptionForeground);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    user-select: none;
+    transition: color 0.1s;
+  }
+  .tab:hover { color: var(--vscode-foreground); }
+  .tab.active {
+    color: var(--vscode-foreground);
+    border-bottom-color: var(--vscode-focusBorder, #0078d4);
+  }
+
+  /* ── Cost tab ── */
+  .cost-section { margin-bottom: 28px; }
+  .cost-section-title {
+    font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--vscode-descriptionForeground); margin-bottom: 10px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--vscode-panel-border, #333);
+  }
+  .cost-total-card {
+    background: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .cost-total-amount { font-size: 1.8em; font-weight: 700; color: #4ec9b0; }
+  .cost-total-label { font-size: 0.82em; color: var(--vscode-descriptionForeground); }
+  .cost-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+  .cost-table th {
+    text-align: left; padding: 5px 10px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--vscode-panel-border, #333);
+    font-weight: 500;
+  }
+  .cost-table td { padding: 6px 10px; border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a); }
+  .cost-table tr:last-child td { border-bottom: none; }
+  .cost-table tr:hover td { background: var(--vscode-list-hoverBackground); }
+  .cost-model-name { font-family: var(--vscode-editor-font-family, monospace); font-size: 0.9em; }
+  .cost-amount { color: #4ec9b0; font-weight: 600; font-family: var(--vscode-editor-font-family, monospace); }
+  .cost-note { font-size: 0.78em; color: var(--vscode-descriptionForeground); margin-top: 10px; opacity: 0.7; }
+
+  /* ── Tab panes ── */
+  .tab-pane { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+  .tab-pane.active { display: block; }
 
   .empty {
     padding: 32px 0;
@@ -116,7 +164,7 @@ function buildHtml(agents: TraceAgent[]): string {
     text-align: center;
   }
 
-  /* Agent card */
+  /* ── Agent card (user view) ── */
   .agent-card {
     border: 1px solid var(--vscode-panel-border, #444);
     border-radius: 6px;
@@ -139,16 +187,16 @@ function buildHtml(agents: TraceAgent[]): string {
   .chevron.open { transform: rotate(90deg); }
   .agent-body { padding: 12px 14px; }
 
-  /* Session */
+  /* ── Session ── */
   .session {
     border-left: 3px solid var(--vscode-panel-border, #555);
     margin-bottom: 16px;
     padding-left: 12px;
   }
-  .session.status-completed { border-color: #4ec9b0; }
-  .session.status-failed    { border-color: #f48771; }
-  .session.status-in_progress { border-color: #dcdcaa; }
-  .session.status-unknown   { border-color: #666; }
+  .session.status-completed  { border-color: #4ec9b0; }
+  .session.status-failed     { border-color: #f48771; }
+  .session.status-in_progress{ border-color: #dcdcaa; }
+  .session.status-unknown    { border-color: #666; }
 
   .session-header {
     display: flex;
@@ -158,77 +206,78 @@ function buildHtml(agents: TraceAgent[]): string {
     flex-wrap: wrap;
   }
   .session-id { font-family: var(--vscode-editor-font-family, monospace); font-size: 0.8em; color: var(--vscode-descriptionForeground); }
-  .badge {
-    font-size: 0.75em;
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-weight: 600;
-  }
-  .badge-completed  { background: #4ec9b030; color: #4ec9b0; }
-  .badge-failed     { background: #f4877130; color: #f48771; }
-  .badge-in_progress{ background: #dcdcaa30; color: #dcdcaa; }
-  .badge-unknown    { background: #66666630; color: #aaa; }
+  .badge { font-size: 0.75em; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .badge-completed   { background: #4ec9b030; color: #4ec9b0; }
+  .badge-failed      { background: #f4877130; color: #f48771; }
+  .badge-in_progress { background: #dcdcaa30; color: #dcdcaa; }
+  .badge-unknown     { background: #66666630; color: #aaa; }
 
-  .token-summary {
-    font-size: 0.8em;
-    color: var(--vscode-descriptionForeground);
-    margin-bottom: 10px;
-  }
+  .token-summary { font-size: 0.8em; color: var(--vscode-descriptionForeground); margin-bottom: 10px; }
   .token-summary span { margin-right: 10px; }
 
-  /* Chat layout — oldest at top, newest at bottom */
+  /* ── Chat layout ── */
   .steps { display: flex; flex-direction: column; gap: 0; }
-  .chat-turn { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; }
-
-  /* Timestamp divider */
+  /* Each turn is a full-width row; bubbles sit inside it */
+  .chat-turn { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
   .turn-ts {
     text-align: center;
     font-size: 0.72em;
     color: var(--vscode-descriptionForeground);
-    margin: 6px 0 12px;
+    margin: 6px 0 14px;
     opacity: 0.6;
   }
 
-  /* Bubble wrappers for positioning popovers */
-  .bubble-wrapper { position: relative; display: flex; flex-direction: column; }
-  .bubble-wrapper-user  { align-self: flex-end; align-items: flex-end; }
-  .bubble-wrapper-assistant { align-self: flex-start; align-items: flex-start; }
+  /* Bubble wrappers — each takes the full chat column width so the bubble
+     itself can control its own width via max-width without the wrapper
+     collapsing around the bubble content. */
+  .bubble-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  .bubble-wrapper-user      { align-items: flex-end; }
+  .bubble-wrapper-assistant { align-items: flex-start; }
 
-  /* User bubble — right aligned, clickable */
-  .bubble-user {
-    align-self: flex-end;
+  .bubble-role {
+    font-size: 0.70em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.65;
+    margin-bottom: 4px;
+    padding: 0 6px;
+    user-select: none;
+  }
+
+  /* Shared bubble base */
+  .bubble-user,
+  .bubble-assistant {
     max-width: 72%;
-    background: var(--vscode-button-background, #0078d4);
-    color: var(--vscode-button-foreground, #fff);
-    border-radius: 16px 16px 4px 16px;
-    padding: 9px 14px;
-    font-size: 0.88em;
-    line-height: 1.55;
+    padding: 11px 18px;
+    font-size: 0.9em;
+    line-height: 1.65;
     white-space: pre-wrap;
     word-break: break-word;
-    cursor: pointer;
     user-select: text;
   }
-  .bubble-user:hover { opacity: 0.92; }
 
-  /* Assistant bubble — left aligned, clickable */
+  .bubble-user {
+    background: var(--vscode-button-background, #0078d4);
+    color: var(--vscode-button-foreground, #fff);
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+    cursor: default;
+  }
+  .bubble-user:hover { opacity: 0.95; }
+
   .bubble-assistant {
-    align-self: flex-start;
-    max-width: 82%;
     background: var(--vscode-editor-inactiveSelectionBackground, #2a2d2e);
     border: 1px solid var(--vscode-panel-border, #3c3c3c);
-    border-radius: 16px 16px 16px 4px;
-    padding: 9px 14px;
-    font-size: 0.88em;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-break: break-word;
+    border-radius: 18px 18px 18px 4px;
     cursor: pointer;
-    user-select: text;
   }
   .bubble-assistant:hover { border-color: var(--vscode-focusBorder, #0078d4); }
 
-  /* Popover card that appears below a bubble on click */
+  /* Popover */
   .bubble-popover {
     display: none;
     flex-direction: column;
@@ -246,24 +295,10 @@ function buildHtml(agents: TraceAgent[]): string {
   }
   .bubble-popover.open { display: flex; }
   .meta-row { display: flex; gap: 8px; align-items: flex-start; }
-  .meta-key {
-    color: var(--vscode-descriptionForeground);
-    min-width: 90px;
-    flex-shrink: 0;
-    padding-top: 1px;
-    font-size: 0.9em;
-  }
-  .meta-val {
-    color: var(--vscode-foreground);
-    word-break: break-all;
-    line-height: 1.4;
-  }
-  .meta-val.mono {
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 0.88em;
-  }
+  .meta-key { color: var(--vscode-descriptionForeground); min-width: 90px; flex-shrink: 0; padding-top: 1px; font-size: 0.9em; }
+  .meta-val { color: var(--vscode-foreground); word-break: break-all; line-height: 1.4; }
+  .meta-val.mono { font-family: var(--vscode-editor-font-family, monospace); font-size: 0.88em; }
 
-  /* "View Trace" button inside the popover */
   .view-trace-btn {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--vscode-button-background, #0078d4);
@@ -276,132 +311,194 @@ function buildHtml(agents: TraceAgent[]): string {
   }
   .view-trace-btn:hover { background: var(--vscode-button-hoverBackground); }
 
-  /* Tool call pills between user and assistant bubbles */
+  /* Tool call pills */
   .tool-calls-block {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-self: flex-start;
-    padding-left: 2px;
-    margin: 4px 0;
+    display: flex; flex-direction: column; gap: 4px;
+    align-self: flex-start; padding-left: 2px; margin: 4px 0;
   }
   .tool-calls-label {
-    font-size: 0.72em;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--vscode-descriptionForeground);
-    opacity: 0.7;
-    margin-bottom: 2px;
+    font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--vscode-descriptionForeground); opacity: 0.7; margin-bottom: 2px;
   }
   .tool-pills { display: flex; flex-wrap: wrap; gap: 5px; padding: 0; }
   .tool-pill {
     display: inline-flex; align-items: center; gap: 5px;
-    background: #dcdcaa18;
-    border: 1px solid #dcdcaa40;
-    border-radius: 12px;
-    padding: 3px 10px;
-    font-size: 0.78em;
-    cursor: pointer;
-    color: #dcdcaa;
-    user-select: none;
+    background: #dcdcaa18; border: 1px solid #dcdcaa40;
+    border-radius: 12px; padding: 3px 10px;
+    font-size: 0.78em; cursor: pointer; color: #dcdcaa; user-select: none;
   }
   .tool-pill:hover { background: #dcdcaa28; }
   .tool-pill-icon { font-size: 0.9em; }
 
-  /* Expandable tool detail */
   .tool-detail {
     display: none;
     background: var(--vscode-textCodeBlock-background, #1a1a1a);
-    border: 1px solid #dcdcaa30;
-    border-radius: 6px;
-    padding: 10px;
-    margin: 2px 0 4px;
-    font-size: 0.82em;
+    border: 1px solid #dcdcaa30; border-radius: 6px;
+    padding: 10px; margin: 2px 0 4px; font-size: 0.82em;
   }
   .tool-detail.open { display: block; }
 
-  /* LLM internal step (collapsed by default, shown as subtle bar) */
-  .step-llm {
-    border: 1px solid #569cd630;
-    border-radius: 4px;
-    background: #569cd608;
-    overflow: hidden;
-    margin-bottom: 4px;
-  }
-  .step-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 10px;
-    cursor: pointer; user-select: none; font-size: 0.82em;
-  }
-  .step-header:hover { background: var(--vscode-list-hoverBackground); }
-  .step-icon { font-size: 0.9em; width: 16px; text-align: center; flex-shrink: 0; }
-  .step-label { font-weight: 500; flex: 1; }
-  .step-tokens { font-size: 0.75em; color: var(--vscode-descriptionForeground); margin-left: auto; white-space: nowrap; }
-  .step-body { padding: 6px 10px 8px 34px; display: none; border-top: 1px solid #569cd620; }
-  .step-body.open { display: block; }
-  .step-status-failed { color: #f48771; }
+  .no-sessions { color: var(--vscode-descriptionForeground); font-size: 0.88em; padding: 8px 0; }
+  .no-steps    { color: var(--vscode-descriptionForeground); font-size: 0.85em; font-style: italic; }
+  .ts { color: var(--vscode-descriptionForeground); font-size: 0.78em; }
 
-  .tool-section { margin-top: 8px; }
-  .tool-section h4 { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+  /* ── Shared code block ── */
   .code-block {
     background: var(--vscode-textCodeBlock-background, #1e1e1e);
     border: 1px solid var(--vscode-panel-border, #333);
-    border-radius: 3px;
-    padding: 8px;
+    border-radius: 3px; padding: 8px;
     font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 0.82em;
-    white-space: pre-wrap;
-    word-break: break-all;
-    max-height: 200px;
-    overflow-y: auto;
-    line-height: 1.4;
+    font-size: 0.82em; white-space: pre-wrap; word-break: break-all;
+    max-height: 200px; overflow-y: auto; line-height: 1.4;
+  }
+  .tool-section { margin-top: 8px; }
+  .tool-section h4 { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
+
+  /* ── Trajectories (span tree) ── */
+  .span-tree { display: flex; flex-direction: column; gap: 0; }
+
+  .span-section { margin-bottom: 24px; }
+  .span-section-title {
+    font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--vscode-descriptionForeground); margin-bottom: 10px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--vscode-panel-border, #333);
   }
 
-  /* Sub-steps (tool calls inside LLM step) */
-  .sub-steps { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
-  .sub-step { border: 1px solid #dcdcaa30; border-radius: 3px; background: #dcdcaa08; overflow: hidden; }
-  .sub-step-header { padding: 5px 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85em; user-select: none; }
-  .sub-step-header:hover { background: var(--vscode-list-hoverBackground); }
-  .sub-step-body { display: none; padding: 6px 8px 8px; border-top: 1px solid #dcdcaa20; }
-  .sub-step-body.open { display: block; }
-
-  .no-sessions { color: var(--vscode-descriptionForeground); font-size: 0.88em; padding: 8px 0; }
-  .no-steps    { color: var(--vscode-descriptionForeground); font-size: 0.85em; font-style: italic; }
-
-  .ts { color: var(--vscode-descriptionForeground); font-size: 0.78em; }
-
-  /* Token chart */
-  .token-chart { margin-bottom: 14px; }
-  .token-chart-title { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); margin-bottom: 6px; }
-  .token-chart svg { display: block; width: 100%; overflow: visible; }
-  .chart-bar-input  { fill: #569cd6; }
-  .chart-bar-output { fill: #4ec9b0; }
-  .chart-label { font-size: 10px; fill: var(--vscode-descriptionForeground, #888); font-family: var(--vscode-font-family, system-ui); }
-  .chart-legend { display: flex; gap: 14px; margin-top: 5px; font-size: 0.78em; color: var(--vscode-descriptionForeground); }
-  .chart-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
-
-  /* Gantt chart */
-  .gantt { margin-bottom: 16px; }
-  .gantt-title { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vscode-descriptionForeground); margin-bottom: 6px; }
-  .gantt-row { display: flex; align-items: center; gap: 0; height: 22px; margin-bottom: 3px; font-size: 0.8em; }
-  .gantt-label { width: 130px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-foreground); padding-right: 8px; text-align: right; font-size: 0.85em; }
-  .gantt-track { flex: 1; position: relative; height: 16px; background: var(--vscode-textCodeBlock-background, #1a1a1a); border-radius: 2px; overflow: visible; }
-  .gantt-bar {
-    position: absolute;
-    top: 0; height: 100%;
-    border-radius: 3px;
-    min-width: 3px;
+  /* Each span row */
+  .span-row {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    margin-bottom: 2px;
     cursor: pointer;
-    transition: opacity 0.1s;
+    border-radius: 3px;
+    transition: background 0.1s;
   }
-  .gantt-bar:hover { opacity: 0.8; }
-  .gantt-bar-llm     { background: #569cd6cc; }
-  .gantt-bar-tool    { background: #dcdcaa99; }
-  .gantt-bar-message { background: #4ec9b066; }
-  .gantt-duration { margin-left: 6px; font-size: 0.78em; color: var(--vscode-descriptionForeground); white-space: nowrap; flex-shrink: 0; }
-  .gantt-axis { display: flex; margin-left: 130px; font-size: 0.72em; color: var(--vscode-descriptionForeground); margin-bottom: 4px; }
-  .gantt-legend { display: flex; gap: 14px; margin-top: 6px; font-size: 0.78em; color: var(--vscode-descriptionForeground); }
-  .gantt-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .span-row:hover { background: var(--vscode-list-hoverBackground); }
+  .span-row.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
+
+  /* Indent prefix */
+  .span-indent { flex-shrink: 0; display: flex; align-items: center; }
+  .span-connector { width: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .span-connector-line { width: 1px; height: 100%; background: var(--vscode-panel-border, #555); }
+  .span-expand-btn {
+    width: 14px; height: 14px; border-radius: 2px;
+    border: 1px solid var(--vscode-panel-border, #555);
+    background: var(--vscode-editor-background);
+    color: var(--vscode-foreground);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; cursor: pointer; flex-shrink: 0;
+    user-select: none;
+  }
+  .span-expand-btn:hover { background: var(--vscode-list-hoverBackground); }
+
+  /* Span type badge */
+  .span-kind {
+    font-size: 0.72em; font-weight: 600; padding: 2px 7px;
+    border-radius: 3px; margin-right: 8px; flex-shrink: 0;
+    text-transform: capitalize; letter-spacing: 0.02em;
+  }
+  .kind-conversation { background: #7b52ab30; color: #c586c0; border: 1px solid #7b52ab50; }
+  .kind-invoke       { background: #0078d430; color: #569cd6; border: 1px solid #0078d450; }
+  .kind-chat         { background: #008c6630; color: #4ec9b0; border: 1px solid #008c6650; }
+  .kind-tool         { background: #7c6300; color: #dcdcaa; border: 1px solid #dcdcaa40; }
+  .kind-user         { background: #444; color: #ccc; border: 1px solid #666; }
+
+  /* Span name + model */
+  .span-name { font-size: 0.88em; flex-shrink: 0; min-width: 0; }
+  .span-model { font-size: 0.78em; color: var(--vscode-descriptionForeground); margin-left: 6px; flex-shrink: 0; }
+
+  /* Status dot */
+  .span-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-left: 6px; }
+  .status-dot-completed  { background: #4ec9b0; }
+  .status-dot-failed     { background: #f48771; }
+  .status-dot-in_progress{ background: #dcdcaa; }
+  .status-dot-unknown    { background: #666; }
+
+  /* Duration bar area */
+  .span-bar-area {
+    flex: 1; position: relative; height: 14px;
+    margin: 0 12px;
+    min-width: 80px;
+  }
+  .span-bar-track {
+    position: absolute; top: 2px; left: 0; right: 0; bottom: 2px;
+    background: var(--vscode-textCodeBlock-background, #1a1a1a);
+    border-radius: 2px;
+  }
+  .span-bar {
+    position: absolute; top: 0; bottom: 0;
+    border-radius: 2px; min-width: 3px;
+    opacity: 0.85;
+  }
+  .bar-conversation { background: #7b52abcc; }
+  .bar-invoke       { background: #0078d4cc; }
+  .bar-chat         { background: #4ec9b0cc; }
+  .bar-tool         { background: #dcdcaa99; }
+  .bar-user         { background: #888; }
+
+  .span-duration {
+    font-size: 0.78em; color: var(--vscode-descriptionForeground);
+    white-space: nowrap; flex-shrink: 0; min-width: 44px; text-align: right;
+    padding-right: 8px;
+  }
+
+  /* Token count (shown in Tokens view mode) */
+  .span-tokens {
+    font-size: 0.78em; color: var(--vscode-descriptionForeground);
+    white-space: nowrap; flex-shrink: 0; min-width: 60px; text-align: right;
+    padding-right: 8px;
+  }
+
+  /* Detail drawer under a selected span */
+  .span-detail {
+    display: none;
+    background: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-panel-border, #3c3c3c);
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 0 0 6px 40px;
+    font-size: 0.82em;
+    line-height: 1.5;
+  }
+  .span-detail.open { display: block; }
+  .detail-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .detail-key { color: var(--vscode-descriptionForeground); min-width: 100px; flex-shrink: 0; }
+  .detail-val { color: var(--vscode-foreground); word-break: break-all; font-family: var(--vscode-editor-font-family, monospace); font-size: 0.9em; }
+  .detail-content {
+    margin-top: 8px; padding: 8px;
+    background: var(--vscode-textCodeBlock-background, #1a1a1a);
+    border-radius: 3px; white-space: pre-wrap; word-break: break-word;
+    max-height: 160px; overflow-y: auto;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.9em;
+  }
+
+  /* Axis ruler */
+  .span-axis {
+    display: flex; margin-bottom: 8px; margin-left: 0;
+    font-size: 0.72em; color: var(--vscode-descriptionForeground);
+  }
+  .axis-left-pad { flex-shrink: 0; }
+  .axis-track { flex: 1; display: flex; justify-content: space-between; margin: 0 12px; }
+
+  /* View mode toggle (Duration / Tokens) */
+  .view-toggle {
+    display: flex; gap: 0; margin-bottom: 12px;
+    border: 1px solid var(--vscode-panel-border, #444);
+    border-radius: 4px; overflow: hidden; width: fit-content;
+  }
+  .view-toggle-btn {
+    padding: 4px 14px; font-size: 0.82em; cursor: pointer;
+    background: transparent; border: none;
+    color: var(--vscode-descriptionForeground);
+    font-family: inherit;
+  }
+  .view-toggle-btn.active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+  }
+  .view-toggle-btn:hover:not(.active) { background: var(--vscode-list-hoverBackground); }
 </style>
 </head>
 <body>
@@ -413,12 +510,22 @@ function buildHtml(agents: TraceAgent[]): string {
   </button>
   <span class="last-updated" id="lastUpdated"></span>
 </div>
-<div id="root"></div>
+
+<div class="tab-bar">
+  <div class="tab" id="tab-user" onclick="switchTab('user')">User view</div>
+  <div class="tab" id="tab-traj" onclick="switchTab('traj')">Trajectories</div>
+  <div class="tab" id="tab-cost" onclick="switchTab('cost')">Cost</div>
+</div>
+
+<div class="tab-pane active" id="pane-user"></div>
+<div class="tab-pane" id="pane-traj"></div>
+<div class="tab-pane" id="pane-cost"></div>
 
 <script>
 (function() {
   const agents = ${data};
 
+  /* ── Utilities ── */
   function el(tag, attrs, ...children) {
     const e = document.createElement(tag);
     if (attrs) Object.entries(attrs).forEach(([k, v]) => {
@@ -434,20 +541,15 @@ function buildHtml(agents: TraceAgent[]): string {
     return e;
   }
 
-  function esc(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
   function fmtTs(iso) {
     if (!iso) return '';
     try { return new Date(iso).toLocaleString(); } catch { return iso; }
   }
-
-  function toggleCollapse(bodyEl, chevronEl) {
-    const open = bodyEl.classList.toggle('open');
-    if (chevronEl) chevronEl.classList.toggle('open', open);
+  function fmtMs(ms) {
+    if (ms == null || isNaN(ms)) return '';
+    if (ms < 1000) return Math.round(ms) + 'ms';
+    return (ms / 1000).toFixed(2) + 's';
   }
-
   function makeCodeBlock(value) {
     const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
     const d = el('div', {'class': 'code-block'});
@@ -455,37 +557,22 @@ function buildHtml(agents: TraceAgent[]): string {
     return d;
   }
 
-  function renderToolCall(tc) {
-    const body = el('div', {'class': 'sub-step-body'});
-    const inSec = el('div', {'class': 'tool-section'},
-      el('h4', {}, 'Input'),
-      makeCodeBlock(tc.input)
-    );
-    body.appendChild(inSec);
-    if (tc.output !== undefined) {
-      body.appendChild(el('div', {'class': 'tool-section'},
-        el('h4', {}, 'Output'),
-        makeCodeBlock(tc.output)
-      ));
-    }
+  /* ── Tab switching ── */
+  window.switchTab = function(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('pane-' + name).classList.add('active');
+  };
 
-    const statusIcon = tc.status === 'failed' ? ' ⚠' : '';
-    const header = el('div', {'class': 'sub-step-header'},
-      el('span', {}, '🔧'),
-      el('span', {'style': 'font-weight:500; flex:1'}, tc.name),
-      el('span', {'class': 'step-status' + (tc.status === 'failed' ? ' step-status-failed' : '')}, statusIcon)
-    );
-    header.addEventListener('click', () => body.classList.toggle('open'));
+  /* ══════════════════════════════════════════════════════════════
+     USER VIEW — chat bubble interface
+  ══════════════════════════════════════════════════════════════ */
 
-    return el('div', {'class': 'sub-step'}, header, body);
-  }
-
-  // Tool call pill + expandable detail (shown between bubbles)
   function renderToolPill(tc) {
     const toolIcon = tc.name === 'web_search' ? '🌐'
                    : tc.name === 'file_search' ? '📂'
-                   : tc.name === 'code_interpreter' ? '💻'
-                   : '🔧';
+                   : tc.name === 'code_interpreter' ? '💻' : '🔧';
     const detail = el('div', {'class': 'tool-detail'});
     detail.appendChild(el('div', {'class': 'tool-section'}, el('h4', {}, 'Input'), makeCodeBlock(tc.input)));
     if (tc.output !== undefined) {
@@ -500,61 +587,35 @@ function buildHtml(agents: TraceAgent[]): string {
     return [pill, detail];
   }
 
-  // Popover card anchored below a bubble — toggled on click
   function makePopover(contentFn) {
     const pop = el('div', {'class': 'bubble-popover'});
     contentFn(pop);
     return pop;
   }
 
-  // User bubble with optional trace-ID popover
   function renderUserBubble(step) {
     const bubble = el('div', {'class': 'bubble-user'});
     bubble.appendChild(document.createTextNode(step.content || '(empty)'));
-
-    const traceId = step.traceId;
-    const ts = step.createdAt;
-    if (!traceId && !ts) { return [bubble, null]; }
-
-    const pop = makePopover(p => {
-      if (ts) {
-        p.appendChild(el('div', {'class': 'meta-row'},
-          el('span', {'class': 'meta-key'}, 'Sent'),
-          el('span', {'class': 'meta-val'}, fmtTs(ts))
-        ));
-      }
-      if (traceId) {
-        p.appendChild(el('div', {'class': 'meta-row'},
-          el('span', {'class': 'meta-key'}, 'Trace ID'),
-          el('span', {'class': 'meta-val mono'}, traceId)
-        ));
-      }
-    });
-
     const wrapper = el('div', {'class': 'bubble-wrapper bubble-wrapper-user'});
+    wrapper.appendChild(el('div', {'class': 'bubble-role'}, 'User'));
     wrapper.appendChild(bubble);
-    wrapper.appendChild(pop);
-    bubble.addEventListener('click', (e) => { e.stopPropagation(); pop.classList.toggle('open'); });
-    document.addEventListener('click', () => pop.classList.remove('open'), { capture: false });
-
-    return [wrapper, null];
+    return wrapper;
   }
 
-  // Assistant bubble with optional response-ID popover + View Trace button.
-  // showViewTrace=true only for conversations; in responses view bubbles are not clickable.
   function renderAssistantBubble(step, llmStep, showViewTrace) {
     const bubble = el('div', {'class': 'bubble-assistant'});
     bubble.appendChild(document.createTextNode(step.content || '(empty)'));
+    const agentLabel = llmStep?.agentName
+      ? \`\${llmStep.agentName}\${llmStep.agentVersion ? ' v' + llmStep.agentVersion : ''}\`
+      : 'AI Assistant';
+    const wrapper = el('div', {'class': 'bubble-wrapper bubble-wrapper-assistant'});
+    wrapper.appendChild(el('div', {'class': 'bubble-role'}, agentLabel));
+    wrapper.appendChild(bubble);
 
-    // In responses view: no popover, bubble is not interactive
-    if (!showViewTrace) {
-      return [bubble, null];
-    }
+    if (!showViewTrace) { return wrapper; }
 
     const responseId = step.responseId ?? llmStep?.responseId ?? null;
-
-    // Only show popover if we have a response ID to link to
-    if (!responseId) { return [bubble, null]; }
+    if (!responseId) { return wrapper; }
 
     const pop = makePopover(p => {
       p.appendChild(el('div', {'class': 'meta-row'},
@@ -569,28 +630,15 @@ function buildHtml(agents: TraceAgent[]): string {
       });
       p.appendChild(el('div', {'class': 'meta-row', 'style': 'margin-top:8px'}, btn));
     });
-
-    const wrapper = el('div', {'class': 'bubble-wrapper bubble-wrapper-assistant'});
-    wrapper.appendChild(bubble);
     wrapper.appendChild(pop);
     bubble.addEventListener('click', (e) => { e.stopPropagation(); pop.classList.toggle('open'); });
     document.addEventListener('click', () => pop.classList.remove('open'), { capture: false });
-
-    return [wrapper, null];
+    return wrapper;
   }
 
-  // Subtle timestamp line between turns
-  function renderTimestamp(iso) {
-    if (!iso) { return null; }
-    return el('div', {'class': 'turn-ts'}, fmtTs(iso));
-  }
-
-  // Group steps into turns and render as chronological chat
   function renderStepsAsTurns(steps, showViewTrace) {
-    // Build turns: group user msg → llm + tools → assistant msg
     const turns = [];
     let current = null;
-
     for (const step of steps) {
       if (step.kind === 'message' && step.role === 'user') {
         if (current) { turns.push(current); }
@@ -611,24 +659,14 @@ function buildHtml(agents: TraceAgent[]): string {
     }
     if (current) { turns.push(current); }
 
-    // Render oldest first (turns are already in chronological order)
     const nodes = [];
     turns.forEach((turn, idx) => {
-      // Timestamp divider before first message or when date changes
       const ts = turn.user?.createdAt ?? turn.llm?.startedAt ?? turn.assistant?.createdAt;
       if (idx === 0 && ts) {
-        nodes.push(renderTimestamp(ts));
+        nodes.push(el('div', {'class': 'turn-ts'}, fmtTs(ts)));
       }
-
       const children = [];
-
-      // User bubble
-      if (turn.user) {
-        const [node] = renderUserBubble(turn.user);
-        children.push(node);
-      }
-
-      // Tool call pills (below user bubble, left-aligned with assistant)
+      if (turn.user) { children.push(renderUserBubble(turn.user)); }
       if (turn.tools.length > 0) {
         const pillRow = el('div', {'class': 'tool-pills'});
         const details = [];
@@ -637,210 +675,20 @@ function buildHtml(agents: TraceAgent[]): string {
           pillRow.appendChild(pill);
           if (detail) { details.push(detail); }
         }
-        const block = el('div', {'class': 'tool-calls-block'},
+        children.push(el('div', {'class': 'tool-calls-block'},
           el('div', {'class': 'tool-calls-label'}, 'Tool Calls'),
-          pillRow,
-          ...details
-        );
-        children.push(block);
+          pillRow, ...details
+        ));
       }
-
-      // Assistant bubble
-      if (turn.assistant) {
-        const [node] = renderAssistantBubble(turn.assistant, turn.llm, showViewTrace);
-        children.push(node);
-      }
-
+      if (turn.assistant) { children.push(renderAssistantBubble(turn.assistant, turn.llm, showViewTrace)); }
       nodes.push(el('div', {'class': 'chat-turn'}, ...children));
     });
-
     return nodes.filter(Boolean);
-  }
-
-  // LLM-only step (no chat messages — keep compact card style)
-  function renderLlmStep(step) {
-    const tokenText = step.tokenUsage
-      ? el('span', {'class': 'step-tokens'}, \`\${step.tokenUsage.input}↑ \${step.tokenUsage.output}↓\`)
-      : null;
-    const body = el('div', {'class': 'step-body'});
-    if (step.toolCalls.length > 0) {
-      body.appendChild(el('div', {'class': 'tool-section'},
-        el('h4', {}, \`Tool Calls (\${step.toolCalls.length})\`),
-        el('div', {'class': 'sub-steps'}, ...step.toolCalls.map(renderToolCall))
-      ));
-    } else {
-      body.appendChild(el('div', {'class': 'no-steps'}, 'No tool calls'));
-    }
-    const header = el('div', {'class': 'step-header'},
-      el('span', {'class': 'step-icon'}, '🧠'),
-      el('span', {'class': 'step-label'}, 'LLM Turn'),
-      tokenText
-    );
-    header.addEventListener('click', () => toggleCollapse(body, null));
-    return el('div', {'class': 'step-llm'}, header, body);
-  }
-
-  function renderTokenChart(steps) {
-    // Collect LLM steps that have token usage
-    const llmSteps = steps.filter(s => s.kind === 'llm' && s.tokenUsage);
-    if (llmSteps.length === 0) { return null; }
-
-    const BAR_H = 14;
-    const GAP = 6;
-    const LABEL_W = 28;
-    const CHART_W = 340;
-    const totalH = llmSteps.length * (BAR_H + GAP);
-
-    const maxTokens = Math.max(...llmSteps.map(s => s.tokenUsage.total));
-
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('viewBox', \`0 0 \${CHART_W + LABEL_W + 60} \${totalH}\`);
-    svg.setAttribute('height', String(totalH));
-
-    llmSteps.forEach((step, i) => {
-      const y = i * (BAR_H + GAP);
-      const inputW = maxTokens > 0 ? (step.tokenUsage.input / maxTokens) * CHART_W : 0;
-      const outputW = maxTokens > 0 ? (step.tokenUsage.output / maxTokens) * CHART_W : 0;
-
-      // Turn label (Turn 1, Turn 2…)
-      const lbl = document.createElementNS(svgNS, 'text');
-      lbl.setAttribute('x', '0');
-      lbl.setAttribute('y', String(y + BAR_H - 2));
-      lbl.setAttribute('class', 'chart-label');
-      lbl.textContent = \`T\${i + 1}\`;
-      svg.appendChild(lbl);
-
-      // Input bar
-      const inRect = document.createElementNS(svgNS, 'rect');
-      inRect.setAttribute('x', String(LABEL_W));
-      inRect.setAttribute('y', String(y));
-      inRect.setAttribute('width', String(inputW));
-      inRect.setAttribute('height', String(BAR_H));
-      inRect.setAttribute('class', 'chart-bar-input');
-      inRect.setAttribute('rx', '2');
-      svg.appendChild(inRect);
-
-      // Output bar (stacked after input)
-      const outRect = document.createElementNS(svgNS, 'rect');
-      outRect.setAttribute('x', String(LABEL_W + inputW));
-      outRect.setAttribute('y', String(y));
-      outRect.setAttribute('width', String(outputW));
-      outRect.setAttribute('height', String(BAR_H));
-      outRect.setAttribute('class', 'chart-bar-output');
-      outRect.setAttribute('rx', '2');
-      svg.appendChild(outRect);
-
-      // Value label
-      const val = document.createElementNS(svgNS, 'text');
-      val.setAttribute('x', String(LABEL_W + inputW + outputW + 4));
-      val.setAttribute('y', String(y + BAR_H - 2));
-      val.setAttribute('class', 'chart-label');
-      val.textContent = \`\${step.tokenUsage.input}↑ \${step.tokenUsage.output}↓\`;
-      svg.appendChild(val);
-    });
-
-    const legend = el('div', {'class': 'chart-legend'},
-      el('span', {},
-        el('span', {'class': 'chart-legend-dot', 'style': 'background:#569cd6'}, ''),
-        'Input tokens'
-      ),
-      el('span', {},
-        el('span', {'class': 'chart-legend-dot', 'style': 'background:#4ec9b0'}, ''),
-        'Output tokens'
-      )
-    );
-
-    return el('div', {'class': 'token-chart'},
-      el('div', {'class': 'token-chart-title'}, 'Token usage per LLM turn'),
-      svg,
-      legend
-    );
-  }
-
-  function fmtMs(ms) {
-    if (ms == null) { return ''; }
-    if (ms < 1000) { return ms + 'ms'; }
-    return (ms / 1000).toFixed(1) + 's';
-  }
-
-  function renderGantt(steps) {
-    // Only render if any step has timing info
-    const timed = steps.filter(s => s.startedAt || s.completedAt);
-    if (timed.length < 2) { return null; }
-
-    // Find global time range
-    const toMs = iso => iso ? new Date(iso).getTime() : null;
-    const allStarts = steps.map(s => toMs(s.startedAt)).filter(Boolean);
-    const allEnds   = steps.map(s => toMs(s.completedAt)).filter(Boolean);
-    if (allStarts.length === 0) { return null; }
-
-    const globalStart = Math.min(...allStarts);
-    const globalEnd   = allEnds.length > 0 ? Math.max(...allEnds) : Math.max(...allStarts) + 1000;
-    const totalMs     = Math.max(globalEnd - globalStart, 1);
-
-    const rows = [];
-
-    steps.forEach((step, idx) => {
-      const start = toMs(step.startedAt);
-      const end   = toMs(step.completedAt);
-      if (!start) { return; }
-      const endMs   = end ?? (start + Math.max(totalMs * 0.05, 100));
-      const durMs   = endMs - start;
-      const leftPct = ((start - globalStart) / totalMs) * 100;
-      const widthPct = Math.max((durMs / totalMs) * 100, 0.5);
-
-      let label, barClass;
-      if (step.kind === 'llm') {
-        label = 'LLM Turn ' + (idx + 1);
-        barClass = 'gantt-bar-llm';
-      } else if (step.kind === 'toolCall') {
-        label = step.name ?? 'tool';
-        barClass = 'gantt-bar-tool';
-      } else {
-        label = step.role === 'user' ? 'User' : 'Assistant';
-        barClass = 'gantt-bar-message';
-      }
-
-      const bar = el('div', {
-        'class': 'gantt-bar ' + barClass,
-        'style': \`left:\${leftPct.toFixed(2)}%; width:\${widthPct.toFixed(2)}%\`,
-        'title': \`\${label}: \${fmtMs(durMs)}\`
-      });
-
-      const track = el('div', {'class': 'gantt-track'}, bar);
-      const dur   = el('div', {'class': 'gantt-duration'}, fmtMs(durMs));
-      const lbl   = el('div', {'class': 'gantt-label'}, label);
-
-      rows.push(el('div', {'class': 'gantt-row'}, lbl, track, dur));
-    });
-
-    if (rows.length === 0) { return null; }
-
-    // Axis: 0ms and totalMs
-    const axis = el('div', {'class': 'gantt-axis'},
-      el('span', {'style': 'flex:0'}, '0'),
-      el('span', {'style': 'flex:1; text-align:right'}, fmtMs(totalMs))
-    );
-
-    const legend = el('div', {'class': 'gantt-legend'},
-      el('span', {}, el('span', {'class': 'gantt-legend-dot', 'style': 'background:#569cd6cc'}, ''), 'LLM'),
-      el('span', {}, el('span', {'class': 'gantt-legend-dot', 'style': 'background:#dcdcaa99'}, ''), 'Tool call'),
-      el('span', {}, el('span', {'class': 'gantt-legend-dot', 'style': 'background:#4ec9b066'}, ''), 'Message')
-    );
-
-    return el('div', {'class': 'gantt'},
-      el('div', {'class': 'gantt-title'}, 'Timeline (Gantt)'),
-      axis,
-      ...rows,
-      legend
-    );
   }
 
   function renderSession(session) {
     const badgeCls = 'badge badge-' + session.status;
     const sessionCls = 'session status-' + session.status;
-
     const tokenInfo = session.totalTokens
       ? el('div', {'class': 'token-summary'},
           el('span', {}, '📊 Tokens:'),
@@ -849,10 +697,6 @@ function buildHtml(agents: TraceAgent[]): string {
           el('span', {}, \`\${session.totalTokens.total} total\`)
         )
       : null;
-
-    const tokenChart = renderTokenChart(session.steps);
-    const gantt = renderGantt(session.steps);
-
     const hasChatSteps = session.steps.some(s => s.kind === 'message');
     const showViewTrace = session.source === 'conversation';
     let stepsEl;
@@ -861,9 +705,8 @@ function buildHtml(agents: TraceAgent[]): string {
     } else if (hasChatSteps) {
       stepsEl = el('div', {'class': 'steps'}, ...renderStepsAsTurns(session.steps, showViewTrace));
     } else {
-      stepsEl = el('div', {'class': 'steps'}, ...session.steps.map(s => s.kind === 'llm' ? renderLlmStep(s) : el('div', {}, '')));
+      stepsEl = el('div', {'class': 'no-steps'}, 'No chat messages in this trace.');
     }
-
     return el('div', {'class': sessionCls},
       el('div', {'class': 'session-header'},
         el('span', {'class': 'session-id'}, session.id),
@@ -871,44 +714,559 @@ function buildHtml(agents: TraceAgent[]): string {
         session.createdAt ? el('span', {'class': 'ts'}, fmtTs(session.createdAt)) : null
       ),
       tokenInfo,
-      gantt,
-      tokenChart,
       stepsEl
     );
   }
 
-  function renderAgent(agent) {
+  function renderAgentUserView(agent) {
     const body = el('div', {'class': 'agent-body'});
     const chevron = el('span', {'class': 'chevron open'}, '▶');
-
     if (agent.sessions.length === 0) {
-      body.appendChild(el('div', {'class': 'no-sessions'},
-        'No sessions found. Open the agent in the Foundry portal and send a message to generate trace data.'
-      ));
+      body.appendChild(el('div', {'class': 'no-sessions'}, 'No sessions found.'));
     } else {
       agent.sessions.forEach(s => body.appendChild(renderSession(s)));
     }
-
     const meta = [agent.model, agent.version ? \`v\${agent.version}\` : null].filter(Boolean).join(' · ');
     const header = el('div', {'class': 'agent-header'},
       chevron,
       el('span', {'class': 'agent-name'}, agent.name),
       meta ? el('span', {'class': 'agent-meta'}, meta) : null
     );
-    header.addEventListener('click', () => toggleCollapse(body, chevron));
-    body.classList.add('open');
-
+    header.addEventListener('click', () => {
+      const open = body.classList.toggle('open-anim');
+      chevron.classList.toggle('open', open);
+    });
+    body.classList.add('open-anim');
+    chevron.classList.add('open');
     return el('div', {'class': 'agent-card'}, header, body);
   }
 
-  function render(agentList) {
-    const root = document.getElementById('root');
-    root.innerHTML = '';
+  function renderUserPane(agentList) {
+    const pane = document.getElementById('pane-user');
+    pane.innerHTML = '';
     if (!agentList || agentList.length === 0) {
-      root.appendChild(el('div', {'class': 'empty'}, 'No agents found. Configure your Foundry project endpoint and run "Foundry Trace: Show Trace".'));
+      pane.appendChild(el('div', {'class': 'empty'}, 'No trace data available.'));
       return;
     }
-    agentList.forEach(a => root.appendChild(renderAgent(a)));
+    agentList.forEach(a => pane.appendChild(renderAgentUserView(a)));
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     TRAJECTORIES — span-tree view with Gantt bars
+  ══════════════════════════════════════════════════════════════ */
+
+  // Build flat list of span rows from agents data
+  function buildSpans(agentList) {
+    // Each "span" has: { id, kind, name, model, status, startMs, endMs, durationMs, tokens, content, responseId, children: [] }
+    const spans = [];
+
+    for (const agent of (agentList || [])) {
+      for (const session of (agent.sessions || [])) {
+        // Group steps into turns (same as chat view)
+        const turns = [];
+        let cur = null;
+        for (const step of session.steps) {
+          if (step.kind === 'message' && step.role === 'user') {
+            if (cur) { turns.push(cur); }
+            cur = { user: step, llm: null, tools: [], assistant: null };
+          } else if (step.kind === 'llm') {
+            if (!cur) { cur = { user: null, llm: null, tools: [], assistant: null }; }
+            cur.llm = step;
+            cur.tools = step.toolCalls ?? [];
+          } else if (step.kind === 'message' && step.role === 'assistant') {
+            if (!cur) { cur = { user: null, llm: null, tools: [], assistant: null }; }
+            cur.assistant = step;
+            turns.push(cur);
+            cur = null;
+          }
+        }
+        if (cur) { turns.push(cur); }
+
+        // Root span = "Conversation" or "Session"
+        const isConv = session.source === 'conversation';
+        const rootSpan = {
+          id: session.id,
+          kind: isConv ? 'conversation' : 'invoke',
+          name: isConv ? session.id.slice(0, 28) + (session.id.length > 28 ? '…' : '') : (agent.name || 'Session'),
+          model: agent.model ?? null,
+          status: session.status,
+          startMs: null,
+          endMs: null,
+          tokens: session.totalTokens ?? null,
+          content: null,
+          responseId: null,
+          children: [],
+          expanded: true,
+        };
+
+        for (let i = 0; i < turns.length; i++) {
+          const turn = turns[i];
+          const llm = turn.llm;
+
+          // "Invoke Agent" span per turn (or just the agent name)
+          const invokeStart = llm?.startedAt ? new Date(llm.startedAt).getTime() : null;
+          // We don't have invoke end separately — approximate from next turn start or use llm start
+          const invokeSpan = {
+            id: \`invoke-\${session.id}-\${i}\`,
+            kind: 'invoke',
+            name: \`invoke_agent \${agent.name ?? 'agent'}\${agent.version ? ':' + agent.version : ''}\`,
+            model: null,
+            status: llm?.status ?? 'completed',
+            startMs: invokeStart,
+            endMs: invokeStart,  // will be extended after we know children
+            tokens: llm?.tokenUsage ?? null,
+            content: null,
+            responseId: llm?.responseId ?? null,
+            children: [],
+            expanded: true,
+          };
+
+          // User message child (shown as a sibling before invoke, or inline)
+          if (turn.user) {
+            const uMs = turn.user.createdAt ? new Date(turn.user.createdAt).getTime() : invokeStart;
+            invokeSpan.children.push({
+              id: \`user-\${session.id}-\${i}\`,
+              kind: 'user',
+              name: (turn.user.content || '').slice(0, 60) + ((turn.user.content || '').length > 60 ? '…' : ''),
+              model: null,
+              status: 'completed',
+              startMs: uMs,
+              endMs: uMs,
+              tokens: null,
+              content: turn.user.content ?? '',
+              responseId: null,
+              children: [],
+              expanded: false,
+            });
+          }
+
+          // Tool call children
+          for (const tc of (turn.tools || [])) {
+            invokeSpan.children.push({
+              id: \`tool-\${session.id}-\${i}-\${tc.id}\`,
+              kind: 'tool',
+              name: \`execute_tool \${tc.name}\`,
+              model: null,
+              status: tc.status,
+              startMs: invokeStart,
+              endMs: invokeStart,
+              tokens: null,
+              content: tc.input != null ? (typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input, null, 2)) : null,
+              responseId: null,
+              children: [],
+              expanded: false,
+            });
+          }
+
+          // Chat (LLM) child
+          if (turn.assistant || llm) {
+            const chatStart = llm?.startedAt ? new Date(llm.startedAt).getTime() : null;
+            invokeSpan.children.push({
+              id: \`chat-\${session.id}-\${i}\`,
+              kind: 'chat',
+              name: \`chat \${llm?.model ?? agent.model ?? 'model'}\`,
+              model: llm?.model ?? agent.model ?? null,
+              status: llm?.status ?? 'completed',
+              startMs: chatStart,
+              endMs: chatStart,
+              tokens: llm?.tokenUsage ?? null,
+              content: turn.assistant?.content ?? '',
+              responseId: llm?.responseId ?? null,
+              children: [],
+              expanded: false,
+            });
+          }
+
+          rootSpan.children.push(invokeSpan);
+
+          // Accumulate timing on root
+          if (invokeStart) {
+            if (!rootSpan.startMs || invokeStart < rootSpan.startMs) { rootSpan.startMs = invokeStart; }
+            if (!rootSpan.endMs || invokeStart > rootSpan.endMs) { rootSpan.endMs = invokeStart; }
+          }
+        }
+
+        spans.push(rootSpan);
+      }
+    }
+    return spans;
+  }
+
+  // Flatten span tree into ordered rows with depth
+  function flattenSpans(spans) {
+    const rows = [];
+    function walk(span, depth, parentExpanded) {
+      if (!parentExpanded) return;
+      rows.push({ span, depth });
+      if (span.expanded && span.children.length > 0) {
+        for (const child of span.children) {
+          walk(child, depth + 1, true);
+        }
+      }
+    }
+    for (const s of spans) { walk(s, 0, true); }
+    return rows;
+  }
+
+  // Compute global time range for Gantt bars
+  function getTimeRange(spans) {
+    let minMs = Infinity, maxMs = -Infinity;
+    function walk(span) {
+      if (span.startMs) { minMs = Math.min(minMs, span.startMs); }
+      if (span.endMs)   { maxMs = Math.max(maxMs, span.endMs); }
+      for (const c of span.children) { walk(c); }
+    }
+    for (const s of spans) { walk(s); }
+    if (!isFinite(minMs)) { return { minMs: 0, maxMs: 1000, totalMs: 1000 }; }
+    const totalMs = Math.max(maxMs - minMs, 1);
+    return { minMs, maxMs, totalMs };
+  }
+
+  let trajectorySpans = [];
+  let viewMode = 'duration'; // 'duration' | 'tokens' | 'cost'
+  let selectedSpanId = null;
+
+  function renderTrajPane(agentList) {
+    trajectorySpans = buildSpans(agentList);
+    _drawTraj();
+  }
+
+  function _drawTraj() {
+    const pane = document.getElementById('pane-traj');
+    pane.innerHTML = '';
+
+    if (trajectorySpans.length === 0) {
+      pane.appendChild(el('div', {'class': 'empty'}, 'No trajectory data available.'));
+      return;
+    }
+
+    // View mode toggle
+    const toggle = el('div', {'class': 'view-toggle'},
+      el('button', {
+        'class': 'view-toggle-btn' + (viewMode === 'duration' ? ' active' : ''),
+        'onclick': () => { viewMode = 'duration'; _drawTraj(); }
+      }, 'Duration'),
+      el('button', {
+        'class': 'view-toggle-btn' + (viewMode === 'tokens' ? ' active' : ''),
+        'onclick': () => { viewMode = 'tokens'; _drawTraj(); }
+      }, 'Tokens'),
+      el('button', {
+        'class': 'view-toggle-btn' + (viewMode === 'cost' ? ' active' : ''),
+        'onclick': () => { viewMode = 'cost'; _drawTraj(); }
+      }, 'Cost')
+    );
+    pane.appendChild(toggle);
+
+    const { minMs, totalMs } = getTimeRange(trajectorySpans);
+    const rows = flattenSpans(trajectorySpans);
+
+    // Estimate label width based on deepest indent (20px per level + kind badge ~80px + name)
+    const LABEL_W = 320; // px for name column
+
+    rows.forEach(({ span, depth }) => {
+      // Expand button
+      const hasChildren = span.children.length > 0;
+      const expandBtn = hasChildren
+        ? el('div', {'class': 'span-expand-btn'}, span.expanded ? '−' : '+')
+        : el('div', {'style': 'width:14px; flex-shrink:0'});
+
+      if (hasChildren) {
+        expandBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          span.expanded = !span.expanded;
+          _drawTraj();
+        });
+      }
+
+      // Kind badge
+      const kindLabel = {
+        conversation: 'Conversation',
+        invoke: 'Invoke Agent',
+        chat: 'Chat',
+        tool: 'Execute Tool',
+        user: 'User',
+      }[span.kind] ?? span.kind;
+      const kindBadge = el('span', {'class': 'span-kind kind-' + span.kind}, kindLabel);
+
+      // Status dot
+      const dot = el('div', {'class': 'span-status status-dot-' + span.status});
+
+      // Name
+      const nameEl = el('span', {'class': 'span-name'}, span.name);
+      const modelEl = span.model ? el('span', {'class': 'span-model'}, span.model) : null;
+
+      // Bar or tokens
+      let barAreaEl, rightEl;
+      if (viewMode === 'duration') {
+        const barArea = el('div', {'class': 'span-bar-area'});
+        const track = el('div', {'class': 'span-bar-track'});
+        barArea.appendChild(track);
+
+        let durLabel = '';
+        if (span.startMs) {
+          const leftPct = ((span.startMs - minMs) / totalMs) * 100;
+          const rawEnd = span.endMs ?? span.startMs;
+          const durMs = Math.max(rawEnd - span.startMs, 0);
+          const widthPct = Math.max((durMs / totalMs) * 100, 0.8);
+          const bar = el('div', {
+            'class': 'span-bar bar-' + span.kind,
+            'style': \`left:\${leftPct.toFixed(2)}%; width:\${widthPct.toFixed(2)}%\`,
+            'title': fmtMs(durMs)
+          });
+          barArea.appendChild(bar);
+          // Show duration if we have real end time, else show start relative to root
+          if (rawEnd > span.startMs) {
+            durLabel = fmtMs(durMs);
+          } else if (span.startMs > minMs) {
+            durLabel = '+' + fmtMs(span.startMs - minMs);
+          }
+        }
+        barAreaEl = barArea;
+        rightEl = el('div', {'class': 'span-duration'}, durLabel);
+      } else if (viewMode === 'tokens') {
+        // Token bars
+        barAreaEl = el('div', {'class': 'span-bar-area'});
+        const t = span.tokens;
+        if (t && t.total > 0) {
+          const allTokenTotals = rows.map(r => r.span.tokens?.total ?? 0);
+          const maxTok = Math.max(...allTokenTotals, 1);
+          const wPct = (t.total / maxTok) * 100;
+          const inPct = (t.input / t.total) * wPct;
+          const outPct = (t.output / t.total) * wPct;
+
+          const track = el('div', {'class': 'span-bar-track'});
+          const inBar = el('div', {'class': 'span-bar', 'style': \`left:0; width:\${inPct.toFixed(2)}%; background:#569cd6cc\`});
+          const outBar = el('div', {'class': 'span-bar', 'style': \`left:\${inPct.toFixed(2)}%; width:\${outPct.toFixed(2)}%; background:#4ec9b0cc\`});
+          barAreaEl.appendChild(track);
+          barAreaEl.appendChild(inBar);
+          barAreaEl.appendChild(outBar);
+          rightEl = el('div', {'class': 'span-tokens'}, \`\${t.total}t\`);
+        } else {
+          barAreaEl.appendChild(el('div', {'class': 'span-bar-track'}));
+          rightEl = el('div', {'class': 'span-tokens'}, '');
+        }
+      } else {
+        // Cost bars
+        barAreaEl = el('div', {'class': 'span-bar-area'});
+        const t = span.tokens;
+        const pricing = t ? lookupPricing(span.model) : null;
+        const spanCost = calcCost(t, pricing);
+
+        if (spanCost != null && spanCost > 0) {
+          const allCosts = rows.map(r => {
+            const rt = r.span.tokens;
+            const rp = rt ? lookupPricing(r.span.model) : null;
+            return calcCost(rt, rp) ?? 0;
+          });
+          const maxCost = Math.max(...allCosts, 0.000001);
+          const wPct = (spanCost / maxCost) * 100;
+          // Split bar: input cost vs output cost (output is typically more expensive)
+          const inputCost  = t ? (t.input  / 1_000_000) * (pricing?.input  ?? 0) : 0;
+          const outputCost = t ? (t.output / 1_000_000) * (pricing?.output ?? 0) : 0;
+          const totalCost  = inputCost + outputCost;
+          const inPct  = totalCost > 0 ? (inputCost  / totalCost) * wPct : 0;
+          const outPct = totalCost > 0 ? (outputCost / totalCost) * wPct : 0;
+
+          const track  = el('div', {'class': 'span-bar-track'});
+          const inBar  = el('div', {'class': 'span-bar', 'style': \`left:0; width:\${inPct.toFixed(2)}%; background:#569cd6cc\`});
+          const outBar = el('div', {'class': 'span-bar', 'style': \`left:\${inPct.toFixed(2)}%; width:\${outPct.toFixed(2)}%; background:#4ec9b0cc\`});
+          barAreaEl.appendChild(track);
+          barAreaEl.appendChild(inBar);
+          barAreaEl.appendChild(outBar);
+          rightEl = el('div', {'class': 'span-tokens'}, fmtCost(spanCost));
+        } else {
+          barAreaEl.appendChild(el('div', {'class': 'span-bar-track'}));
+          rightEl = el('div', {'class': 'span-tokens'}, spanCost === 0 ? '—' : '');
+        }
+      }
+
+      // Indent: 20px per level, plus expand btn
+      const indentPad = el('div', {'class': 'span-indent', 'style': \`padding-left:\${depth * 20}px\`});
+
+      const isSelected = span.id === selectedSpanId;
+      const rowEl = el('div', {'class': 'span-row' + (isSelected ? ' selected' : '')},
+        indentPad, expandBtn, kindBadge, dot, nameEl, modelEl, barAreaEl, rightEl
+      );
+      rowEl.addEventListener('click', () => {
+        selectedSpanId = span.id === selectedSpanId ? null : span.id;
+        _drawTraj();
+      });
+      pane.appendChild(rowEl);
+
+      // Detail drawer for selected span
+      if (isSelected) {
+        const drawer = el('div', {'class': 'span-detail open'});
+        const addRow = (key, val) => {
+          if (val == null || val === '') return;
+          drawer.appendChild(el('div', {'class': 'detail-row'},
+            el('div', {'class': 'detail-key'}, key),
+            el('div', {'class': 'detail-val'}, String(val))
+          ));
+        };
+        addRow('Status', span.status);
+        if (span.responseId) { addRow('Response ID', span.responseId); }
+        if (span.model) { addRow('Model', span.model); }
+        if (span.tokens) {
+          addRow('Tokens', \`\${span.tokens.input} in + \${span.tokens.output} out = \${span.tokens.total} total\`);
+        }
+        if (span.content) {
+          drawer.appendChild(el('div', {'class': 'detail-content'}, span.content));
+        }
+        // View Trace button for chat spans
+        if (span.responseId && span.kind === 'chat') {
+          const btn = el('button', {'class': 'view-trace-btn', 'style': 'margin-top:10px'}, '↗ View Trace');
+          btn.addEventListener('click', () => {
+            vscode.postMessage({ type: 'viewTrace', responseId: span.responseId });
+          });
+          drawer.appendChild(btn);
+        }
+        pane.appendChild(drawer);
+      }
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     COST TAB
+  ══════════════════════════════════════════════════════════════ */
+
+  // Pricing per million tokens (input / output) for known Azure OpenAI / OpenAI models.
+  // Prices are approximate USD list prices as of mid-2025 — shown with a disclaimer.
+  const MODEL_PRICING = {
+    // GPT-4.1 family
+    'gpt-4.1':                 { input: 2.00,  output: 8.00  },
+    'gpt-4.1-mini':            { input: 0.40,  output: 1.60  },
+    'gpt-4.1-nano':            { input: 0.10,  output: 0.40  },
+    // GPT-4o family
+    'gpt-4o':                  { input: 5.00,  output: 15.00 },
+    'gpt-4o-mini':             { input: 0.15,  output: 0.60  },
+    'gpt-4o-2024-11-20':       { input: 2.50,  output: 10.00 },
+    'gpt-4o-2024-08-06':       { input: 2.50,  output: 10.00 },
+    'gpt-4o-mini-2024-07-18':  { input: 0.15,  output: 0.60  },
+    // GPT-4 Turbo
+    'gpt-4-turbo':             { input: 10.00, output: 30.00 },
+    'gpt-4-turbo-2024-04-09':  { input: 10.00, output: 30.00 },
+    // o-series
+    'o1':                      { input: 15.00, output: 60.00 },
+    'o1-mini':                 { input: 3.00,  output: 12.00 },
+    'o3':                      { input: 10.00, output: 40.00 },
+    'o3-mini':                 { input: 1.10,  output: 4.40  },
+    'o4-mini':                 { input: 1.10,  output: 4.40  },
+  };
+
+  function lookupPricing(model) {
+    if (!model) return null;
+    const lower = model.toLowerCase();
+    // Exact match first
+    if (MODEL_PRICING[lower]) return MODEL_PRICING[lower];
+    // Prefix match (e.g. "gpt-4.1-mini-2025-04-14" matches "gpt-4.1-mini")
+    for (const key of Object.keys(MODEL_PRICING)) {
+      if (lower.startsWith(key)) return MODEL_PRICING[key];
+    }
+    return null;
+  }
+
+  function calcCost(tokens, pricing) {
+    if (!tokens || !pricing) return null;
+    return (tokens.input / 1_000_000) * pricing.input
+         + (tokens.output / 1_000_000) * pricing.output;
+  }
+
+  function fmtCost(usd) {
+    if (usd == null) return '—';
+    if (usd < 0.000001) return '$0.000000';
+    if (usd < 0.001) return '$' + usd.toFixed(6);
+    if (usd < 0.01)  return '$' + usd.toFixed(5);
+    if (usd < 1)     return '$' + usd.toFixed(4);
+    return '$' + usd.toFixed(3);
+  }
+
+  function renderCostPane(agentList) {
+    const pane = document.getElementById('pane-cost');
+    pane.innerHTML = '';
+
+    // Collect per-model token totals from all LLM steps across all agents/sessions
+    const byModel = new Map(); // model -> { input, output, turns }
+
+    for (const agent of (agentList || [])) {
+      for (const session of (agent.sessions || [])) {
+        for (const step of (session.steps || [])) {
+          if (step.kind === 'llm' && step.tokenUsage) {
+            const model = step.model ?? agent.model ?? 'unknown';
+            if (!byModel.has(model)) { byModel.set(model, { input: 0, output: 0, turns: 0 }); }
+            const e = byModel.get(model);
+            e.input  += step.tokenUsage.input;
+            e.output += step.tokenUsage.output;
+            e.turns++;
+          }
+        }
+      }
+    }
+
+    if (byModel.size === 0) {
+      pane.appendChild(el('div', {'class': 'empty'}, 'No token usage data available. Open a conversation to populate cost data.'));
+      return;
+    }
+
+    // Compute per-model cost and grand total
+    let grandTotal = 0;
+    let hasUnknown = false;
+    const rows = [];
+
+    for (const [model, tok] of byModel) {
+      const pricing = lookupPricing(model);
+      const cost = calcCost(tok, pricing);
+      if (cost != null) { grandTotal += cost; } else { hasUnknown = true; }
+      rows.push({ model, tok, pricing, cost });
+    }
+
+    // Grand total card
+    pane.appendChild(el('div', {'class': 'cost-total-card'},
+      el('div', {'class': 'cost-total-amount'}, fmtCost(grandTotal)),
+      el('div', {'class': 'cost-total-label'}, 'estimated total cost' + (hasUnknown ? ' (some models unpriced)' : ''))
+    ));
+
+    // Per-model table
+    const thead = el('thead', {},
+      el('tr', {},
+        el('th', {}, 'Model'),
+        el('th', {}, 'Turns'),
+        el('th', {}, 'Input tokens'),
+        el('th', {}, 'Output tokens'),
+        el('th', {}, 'Total tokens'),
+        el('th', {}, 'Est. cost')
+      )
+    );
+    const tbody = el('tbody', {});
+
+    for (const { model, tok, cost } of rows) {
+      tbody.appendChild(el('tr', {},
+        el('td', {}, el('span', {'class': 'cost-model-name'}, model)),
+        el('td', {}, String(tok.turns)),
+        el('td', {}, tok.input.toLocaleString()),
+        el('td', {}, tok.output.toLocaleString()),
+        el('td', {}, (tok.input + tok.output).toLocaleString()),
+        el('td', {}, el('span', {'class': 'cost-amount'}, fmtCost(cost)))
+      ));
+    }
+
+    const table = el('table', {'class': 'cost-table'}, thead, tbody);
+    pane.appendChild(el('div', {'class': 'cost-section'},
+      el('div', {'class': 'cost-section-title'}, 'Per-model breakdown'),
+      table
+    ));
+
+    pane.appendChild(el('div', {'class': 'cost-note'},
+      '* Prices are approximate USD list prices per 1M tokens as of mid-2025. ' +
+      'Actual costs may vary based on your Azure/OpenAI subscription, region, and discounts. ' +
+      'Models not in the pricing table show "—".'
+    ));
+  }
+
+  /* ── Main render ── */
+  function render(agentList) {
+    renderUserPane(agentList);
+    renderTrajPane(agentList);
+    renderCostPane(agentList);
   }
 
   const vscode = acquireVsCodeApi();
@@ -933,10 +1291,12 @@ function buildHtml(agents: TraceAgent[]): string {
     if (label) label.textContent = on ? ' Refreshing…' : '↻ Refresh';
   }
 
+  // Default: User view tab active
+  switchTab('user');
+
   render(agents);
   document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
 
-  // Messages from extension
   window.addEventListener('message', e => {
     if (e.data?.type === 'update') {
       render(e.data.agents);

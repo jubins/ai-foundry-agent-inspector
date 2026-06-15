@@ -34,6 +34,10 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     }),
 
+    vscode.commands.registerCommand("foundryInspector.silentRefresh", () =>
+      loadConnectionData(context, out, true)
+    ),
+
     vscode.commands.registerCommand(
       "foundryInspector.openConversation",
       (conv: ConversationSummary) => {
@@ -69,7 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await vscode.workspace
           .getConfiguration("aiFoundryAgentInspector")
           .update("conversationIds", [...current, trimmed], vscode.ConfigurationTarget.Global);
-        await loadConnectionData(context, out);
+        await loadConnectionData(context, out, true);
       }
     }),
 
@@ -83,7 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.workspace
         .getConfiguration("aiFoundryAgentInspector")
         .update("responseIds", current.filter(r => r !== id), vscode.ConfigurationTarget.Global);
-      await loadConnectionData(context, out);
+      await loadConnectionData(context, out, true);
     }),
 
     vscode.commands.registerCommand("foundryInspector.addResponse", async () => {
@@ -107,7 +111,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await vscode.workspace
           .getConfiguration("aiFoundryAgentInspector")
           .update("responseIds", [...current, trimmed], vscode.ConfigurationTarget.Global);
-        await loadConnectionData(context, out);
+        await loadConnectionData(context, out, true);
       }
     })
   );
