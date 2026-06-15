@@ -1,7 +1,7 @@
 {
-  "name": "ai-foundry-agent-inspector",
-  "displayName": "AI Foundry Agent Inspector",
-  "description": "Visualize and debug Azure AI Foundry Agent Service runs directly in VS Code",
+  "name": "foundry-trace-inspector",
+  "displayName": "Foundry Trace Inspector",
+  "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
   "version": "0.1.0",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
@@ -42,7 +42,7 @@
       "activitybar": [
         {
           "id": "foundryInspector",
-          "title": "AI Foundry Inspector",
+          "title": "Foundry Trace Inspector",
           "icon": "images/icon-sidebar.svg"
         }
       ]
@@ -51,7 +51,7 @@
       "foundryInspector": [
         {
           "id": "foundryInspector.sidebar",
-          "name": "AI Foundry Inspector",
+          "name": "Foundry Trace Inspector",
           "icon": "images/icon-sidebar.svg"
         }
       ]
@@ -143,7 +143,7 @@
       ]
     },
     "configuration": {
-      "title": "AI Foundry Agent Inspector",
+      "title": "Foundry Trace Inspector",
       "properties": {
         "aiFoundryAgentInspector.projectEndpoint": {
           "type": "string",

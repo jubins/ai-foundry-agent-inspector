@@ -14,7 +14,7 @@ export function openOnboardingPanel(context: vscode.ExtensionContext): void {
 
   _panel = vscode.window.createWebviewPanel(
     "foundryOnboarding",
-    "AI Foundry Inspector — Setup",
+    "Foundry Trace Inspector — Setup",
     vscode.ViewColumn.One,
     { enableScripts: true, retainContextWhenHidden: true }
   );
@@ -92,6 +92,17 @@ export function openOnboardingPanel(context: vscode.ExtensionContext): void {
           );
           break;
         }
+        case "disconnect": {
+          await vscode.workspace
+            .getConfiguration("aiFoundryAgentInspector")
+            .update("projectEndpoint", "", vscode.ConfigurationTarget.Global);
+          await vscode.workspace
+            .getConfiguration("aiFoundryAgentInspector")
+            .update("authMethod", "entraId", vscode.ConfigurationTarget.Global);
+          await context.secrets.delete("aiFoundryAgentInspector.apiKey");
+          _panel?.webview.postMessage({ type: "disconnected" });
+          break;
+        }
       }
     },
     null,
@@ -110,7 +121,7 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Foundry Inspector — Setup</title>
+<title>Foundry Trace Inspector — Setup</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -122,7 +133,17 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
     max-width: 680px;
   }
   h1 { font-size: 1.3em; font-weight: 700; margin-bottom: 6px; }
-  .subtitle { color: var(--vscode-descriptionForeground); margin-bottom: 32px; font-size: 0.92em; }
+  .subtitle { color: var(--vscode-descriptionForeground); margin-bottom: 10px; font-size: 0.92em; }
+  .privacy-note {
+    font-size: 0.82em;
+    color: var(--vscode-descriptionForeground);
+    background: var(--vscode-textBlockQuote-background, #1e1e2e);
+    border-left: 3px solid #4ec9b0;
+    padding: 8px 12px;
+    border-radius: 3px;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
 
   .step {
     border: 1px solid var(--vscode-panel-border, #444);
@@ -227,8 +248,9 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
 </head>
 <body>
 
-<h1>🔍 AI Foundry Inspector</h1>
+<h1>🔍 Foundry Trace Inspector</h1>
 <p class="subtitle">Connect to your Azure AI Foundry project to browse conversations and inspect agent traces.</p>
+<p class="privacy-note">🔒 Your API keys and project data are never sent to any server outside your own Azure endpoint. Nothing is stored or logged by this extension beyond what VS Code persists locally.</p>
 
 <!-- Step 1: Endpoint -->
 <div class="step" id="step1">
@@ -273,6 +295,9 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
           Entra ID / az login
         </label>
       </div>
+      <p class="hint" id="entraHint" style="${!isApiKey ? "" : "display:none"}">
+        Requires the Azure CLI — run <code>brew install azure-cli</code> then <code>az login</code> in a terminal before testing the connection.
+      </p>
     </div>
 
     <div class="api-key-section ${isApiKey ? "visible" : ""}" id="apiKeySection">

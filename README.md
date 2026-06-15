@@ -17,7 +17,7 @@ See exactly what your agent did on every run — which tools it called, what it 
 
 ## What it does
 
-**AI Foundry Agent Inspector** connects to your Azure AI Foundry project and gives you three views for every agent run:
+**Foundry Trace Inspector** connects to your Azure AI Foundry project and gives you three views for every agent run:
 
 ### Trajectories
 A Gantt-style span tree — Session → Invoke Agent → Chat + Tool calls — with per-span duration, token counts, and cost. Click any span to expand its detail drawer showing model, status, token breakdown, and raw input/output.
@@ -55,11 +55,11 @@ A stacked bar chart (input vs output tokens per LLM turn) so you can spot the ex
 
 ### 1. Install
 
-Search **"AI Foundry Agent Inspector"** in the VS Code Extensions panel, or install from the [Marketplace page](https://marketplace.visualstudio.com/items?itemName=jubinsoni.ai-foundry-agent-inspector).
+Search **"Foundry Trace Inspector"** in the VS Code Extensions panel, or install from the [Marketplace page](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector).
 
 ### 2. Configure
 
-Click the **AI Foundry Inspector** icon in the Activity Bar (left sidebar), then click the **⚙ gear** button to open the setup panel.
+Click the **Foundry Trace Inspector** icon in the Activity Bar (left sidebar), then click the **⚙ gear** button to open the setup panel.
 
 You need two things:
 
@@ -70,8 +70,10 @@ You need two things:
 
 If using an API key, click **Set API Key** in the setup panel — your key is stored in VS Code's encrypted SecretStorage and never written to `settings.json`.
 
+> **Your data stays on your machine.** API keys, project endpoints, and trace content are never sent to any server outside your own Azure endpoint. Nothing is stored or logged by this extension beyond what VS Code itself persists locally.
+
 <!--
-  SCREENSHOT: VS Code Settings UI showing the AI Foundry Agent Inspector section.
+  SCREENSHOT: VS Code Settings UI showing the Foundry Trace Inspector section.
   Save to: images/screenshot-settings.png
 -->
 <!-- ![Settings panel showing projectEndpoint and authMethod fields](images/screenshot-settings.png) -->
