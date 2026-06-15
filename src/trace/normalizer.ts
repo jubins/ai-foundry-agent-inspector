@@ -331,6 +331,14 @@ function normalizeResponseChain(
 
 // ── Conversation items path ───────────────────────────────────────────────────
 
+export interface ResponseMeta {
+  id: string;
+  model?: string;
+  status?: string;
+  createdAt?: number;
+  tokenUsage?: TokenUsage;
+}
+
 type RawItem = {
   type: string;
   id?: string;
@@ -353,10 +361,11 @@ type RawItem = {
 
 export function normalizeFromConversationItems(
   conversationId: string,
-  items: OpenAI.Conversations.ConversationItem[]
+  items: OpenAI.Conversations.ConversationItem[],
+  responseMetas: Map<string, ResponseMeta> = new Map()
 ): TraceAgent[] {
-  // API returns items newest-first; reverse to get chronological order
-  const raw = (items as unknown as RawItem[]).slice().reverse();
+  // API is called with order:"asc" so items are already chronological
+  const raw = items as unknown as RawItem[];
 
   // ── Pass 1: Build tool-call map (id → ToolCallStep) ─────────────────────────
   const toolCallMap = new Map<string, ToolCallStep>();
@@ -409,6 +418,7 @@ export function normalizeFromConversationItems(
     assistantTs?: string;
     responseId?: string;
     agentName?: string;
+    agentVersion?: string;
   };
 
   const turns: Turn[] = [];
@@ -438,6 +448,7 @@ export function normalizeFromConversationItems(
         current.assistantTs ??= item.created_at ? isoFromUnix(item.created_at) : undefined;
         current.responseId ??= item.created_by?.response_id;
         current.agentName ??= item.created_by?.agent?.name;
+        current.agentVersion ??= item.created_by?.agent?.version;
       }
     } else if (t === "function_call" || t === "web_search_call" ||
                t === "file_search_call" || t === "code_interpreter_call") {
@@ -469,14 +480,19 @@ export function normalizeFromConversationItems(
       } satisfies MessageStep);
     }
 
+    const meta = turn.responseId ? responseMetas.get(turn.responseId) : undefined;
     const llmStep: LlmStep = {
       kind: "llm",
       id: `llm-${i}`,
-      model: undefined,
-      status: "completed",
-      startedAt: turn.assistantTs,
+      model: meta?.model,
+      status: meta?.status ? responseStatus(meta.status) : "completed",
+      startedAt: meta?.createdAt ? isoFromUnix(meta.createdAt) : turn.assistantTs,
       toolCalls: turn.tools,
       responseId: turn.responseId,
+      tokenUsage: meta?.tokenUsage,
+      // Store agent name/version for span-style rendering
+      ...(turn.agentName ? { agentName: turn.agentName } : {}),
+      ...(turn.agentVersion ? { agentVersion: turn.agentVersion } : {}),
     };
     steps.push(llmStep);
 

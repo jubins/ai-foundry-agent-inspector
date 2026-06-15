@@ -286,7 +286,8 @@ export class FoundryTreeProvider
 
 export async function loadConnectionData(
   context: vscode.ExtensionContext,
-  out: vscode.OutputChannel
+  out: vscode.OutputChannel,
+  silent = false
 ): Promise<void> {
   const cfg = getConfig();
   if (!cfg.projectEndpoint) {
@@ -294,7 +295,8 @@ export async function loadConnectionData(
     return;
   }
 
-  setConnectionState({ status: "connecting" });
+  // Only show "connecting" spinner on initial/explicit refresh — not on silent sidebar updates
+  if (!silent) { setConnectionState({ status: "connecting" }); }
 
   try {
     const apiKey = cfg.authMethod === "apiKey"

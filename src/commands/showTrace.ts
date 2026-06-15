@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "../client";
 import { getConfig, getApiKey } from "../config";
 import { normalizeFromResponses, normalizeFromConversationItems } from "../trace/normalizer";
+import type { ResponseMeta } from "../trace/normalizer";
 import { showTracePanel } from "../webview/tracePanel";
 import type { OutputChannel } from "../outputChannel";
 import type { AIProjectClient } from "@azure/ai-projects";
@@ -43,12 +44,38 @@ export async function showTrace(
             const client = createClient(config, apiKey);
             const openai = buildOpenAIClient(config.projectEndpoint, apiKey, client);
             const items: OpenAI.Conversations.ConversationItem[] = [];
-            for await (const item of await openai.conversations.items.list(convId)) {
+            for await (const item of await openai.conversations.items.list(convId, { order: "asc" })) {
               items.push(item);
             }
             out.appendLine(`Conversation ${convId}: ${items.length} items`);
-            out.appendLine(`Raw conversation items:\n${JSON.stringify(items, null, 2)}`);
-            const traceAgents = normalizeFromConversationItems(convId, items);
+
+            // Collect unique response IDs from assistant messages to hydrate metadata
+            const responseIds = new Set<string>();
+            for (const item of items) {
+              const raw = item as unknown as { created_by?: { response_id?: string } };
+              if (raw.created_by?.response_id) { responseIds.add(raw.created_by.response_id); }
+            }
+
+            // Fetch response metadata in parallel (model, tokens, timing)
+            const responseMetas = new Map<string, ResponseMeta>();
+            await Promise.all([...responseIds].map(async (rid) => {
+              try {
+                const resp = await openai.responses.retrieve(rid);
+                responseMetas.set(rid, {
+                  id: rid,
+                  model: resp.model,
+                  status: resp.status ?? undefined,
+                  createdAt: resp.created_at,
+                  tokenUsage: resp.usage ? {
+                    input: resp.usage.input_tokens,
+                    output: resp.usage.output_tokens,
+                    total: resp.usage.input_tokens + resp.usage.output_tokens,
+                  } : undefined,
+                });
+              } catch { /* metadata fetch is best-effort */ }
+            }));
+
+            const traceAgents = normalizeFromConversationItems(convId, items, responseMetas);
             showTracePanel(context, traceAgents, fetchAndShowConv);
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
