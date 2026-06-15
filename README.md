@@ -6,12 +6,7 @@ See exactly what your agent did on every run — which tools it called, what it 
 
 > No account, no subscription, no telemetry.
 
-<!--
-  SCREENSHOT: Main trace panel open with Trajectories tab visible and spans expanded.
-  Recommended: 1280×800 window, 2x Retina capture.
-  Save to: images/screenshot-timeline.png
--->
-<!-- ![Trace timeline showing Session → Invoke Agent → Chat and tool spans](images/screenshot-timeline.png) -->
+![Foundry Trace Inspector demo](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/hero-video.gif)
 
 ---
 
@@ -28,11 +23,9 @@ A chat-bubble replay of the conversation: user messages and assistant replies re
 ### Token & Cost chart
 A stacked bar chart (input vs output tokens per LLM turn) so you can spot the expensive turns at a glance.
 
-<!--
-  SCREENSHOT: Trajectories tab with Session > Invoke Agent > Chat span tree expanded.
-  Save to: images/screenshot-trajectories.png
--->
-<!-- ![Trajectories tab showing span tree with duration bars](images/screenshot-trajectories.png) -->
+| Duration | Tokens | Cost |
+|----------|--------|------|
+| ![Trajectories duration view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-duration.png) | ![Trajectories tokens view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-tokens.png) | ![Trajectories cost view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-cost.png) |
 
 ---
 
@@ -72,11 +65,7 @@ If using an API key, click **Set API Key** in the setup panel — your key is st
 
 > **Your data stays on your machine.** API keys, project endpoints, and trace content are never sent to any server outside your own Azure endpoint. Nothing is stored or logged by this extension beyond what VS Code itself persists locally.
 
-<!--
-  SCREENSHOT: VS Code Settings UI showing the Foundry Trace Inspector section.
-  Save to: images/screenshot-settings.png
--->
-<!-- ![Settings panel showing projectEndpoint and authMethod fields](images/screenshot-settings.png) -->
+![Auth setup walkthrough](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/auth-setup.gif)
 
 ### 3. Add a response ID
 
@@ -86,11 +75,7 @@ If using an API key, click **Set API Key** in the setup panel — your key is st
 
 The extension fetches the trace and displays it immediately.
 
-<!--
-  SCREENSHOT: The sidebar showing Conversations and Responses sections with real data.
-  Save to: images/screenshot-sidebar.png
--->
-<!-- ![Sidebar showing Conversations and Responses sections with real entries](images/screenshot-sidebar.png) -->
+![User conversation view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/user-conversation-view.png)
 
 ### 4. Explore the trace
 
@@ -100,35 +85,28 @@ Click any response in the sidebar to open the trace panel. Switch between:
 - **User View** — readable conversation with "View Trace" buttons
 - **Duration / Tokens / Cost** — per-span breakdown
 
-<!--
-  SCREENSHOT: Trace panel open on the User View tab, showing assistant bubbles with agent name.
-  Save to: images/screenshot-trace-detail.png
--->
-<!-- ![Trace panel showing User View with chat bubbles and agent name](images/screenshot-trace-detail.png) -->
+![Token and cost breakdown](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/cost.png)
 
 ---
 
-## Screenshots to add
-
-> The screenshots above are placeholders — actual images coming soon. In the meantime, here is what each view looks like:
->
-> - **Trajectories**: A tree of colored span rows (purple Session → blue Invoke Agent → teal Chat → orange Tool), each with a proportional timing bar and token/cost stats on hover
-> - **User View**: Chat bubbles showing user messages (right-aligned) and assistant replies (left-aligned) with the agent name and model shown above each assistant bubble
-> - **Token chart**: Stacked horizontal bars, one per LLM turn, blue = input tokens, teal = output tokens
-
----
 
 ## Commands
 
-| Command | Description |
+Everything can be done from the **Foundry Trace Inspector panel** in the Activity Bar — but all actions are also available via the Command Palette. Press `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux) and type **"Foundry Trace"** to see all commands.
+
+![Foundry Trace commands in the Command Palette](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/foundry-trace-commands.png)
+
+| Command | Panel equivalent |
 |---|---|
-| `AI Foundry: Setup / Configure` | Open the setup panel to enter your endpoint and API key |
-| `AI Foundry: Refresh` | Re-fetch all tracked responses and update the sidebar |
-| `AI Foundry: Add Response ID` | Paste a `resp_...` ID to track it |
-| `AI Foundry: Add Conversation ID` | Paste a `conv_...` ID to track it |
-| `AI Foundry: Open Response` | Open the trace panel for a specific response |
-| `Foundry Trace: Set API Key` | Store an API key securely in SecretStorage |
-| `Foundry Trace: Clear API Key` | Remove the stored API key |
+| `Foundry Trace: Setup / Configure` | ⚙ gear button in the panel header |
+| `Foundry Trace: Refresh` | ↺ refresh button in the panel header |
+| `Foundry Trace: Add Response ID` | **+** next to Responses in the sidebar |
+| `Foundry Trace: Add Conversation ID` | **+** next to Conversations in the sidebar |
+| `Foundry Trace: Delete Response` | 🗑 trash icon on a response item |
+| `Foundry Trace: Delete Conversation` | 🗑 trash icon on a conversation item |
+| `Foundry Trace: Open Response` | Click any response in the sidebar |
+| `Foundry Trace: Set API Key` | "Set API Key" button in the setup panel |
+| `Foundry Trace: Clear API Key` | "Clear API Key" button in the setup panel |
 
 ---
 

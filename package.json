@@ -79,40 +79,40 @@
       },
       {
         "command": "foundryInspector.openOnboarding",
-        "title": "AI Foundry: Setup / Configure",
+        "title": "Foundry Trace: Setup / Configure",
         "icon": "$(gear)"
       },
       {
         "command": "foundryInspector.refresh",
-        "title": "AI Foundry: Refresh",
+        "title": "Foundry Trace: Refresh",
         "icon": "$(refresh)"
       },
       {
         "command": "foundryInspector.openConversation",
-        "title": "AI Foundry: Open Conversation"
+        "title": "Foundry Trace: Open Conversation"
       },
       {
         "command": "foundryInspector.openResponse",
-        "title": "AI Foundry: Open Response"
+        "title": "Foundry Trace: Open Response"
       },
       {
         "command": "foundryInspector.addConversation",
-        "title": "AI Foundry: Add Conversation ID",
+        "title": "Foundry Trace: Add Conversation ID",
         "icon": "$(add)"
       },
       {
         "command": "foundryInspector.addResponse",
-        "title": "AI Foundry: Add Response ID",
+        "title": "Foundry Trace: Add Response ID",
         "icon": "$(add)"
       },
       {
         "command": "foundryInspector.deleteResponse",
-        "title": "AI Foundry: Delete Response",
+        "title": "Foundry Trace: Delete Response",
         "icon": "$(trash)"
       },
       {
         "command": "foundryInspector.deleteConversation",
-        "title": "AI Foundry: Delete Conversation",
+        "title": "Foundry Trace: Delete Conversation",
         "icon": "$(trash)"
       }
     ],
