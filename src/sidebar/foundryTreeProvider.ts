@@ -357,11 +357,15 @@ export async function loadConnectionData(
     const client = createClient(cfg, apiKey);
     const openai = buildOpenAIClient(cfg.projectEndpoint, apiKey);
 
-    // Load agents (for context / future use)
+    // Load agents — best-effort, don't let failure abort response hydration
     const agents: Array<{ id: string; name: string }> = [];
-    for await (const agent of client.agents.list()) {
-      const a = agent as unknown as { id?: string; name?: string; display_name?: string };
-      agents.push({ id: a.id ?? "", name: a.display_name ?? a.name ?? "Agent" });
+    try {
+      for await (const agent of client.agents.list()) {
+        const a = agent as unknown as { id?: string; name?: string; display_name?: string };
+        agents.push({ id: a.id ?? "", name: a.display_name ?? a.name ?? "Agent" });
+      }
+    } catch (err) {
+      out.appendLine(`Could not list agents (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
     }
 
     // Hydrate saved response IDs
@@ -381,7 +385,6 @@ export async function loadConnectionData(
           conversationId: convId,
         });
 
-        // Extract conversation ID from the response
         if (convId && !convMap.has(convId)) {
           convMap.set(convId, {
             id: convId,
