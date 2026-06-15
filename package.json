@@ -1,7 +1,7 @@
 {
-  "name": "ai-foundry-agent-inspector",
-  "displayName": "AI Foundry Agent Inspector",
-  "description": "Visualize and debug Azure AI Foundry Agent Service runs directly in VS Code",
+  "name": "foundry-trace-inspector",
+  "displayName": "Foundry Trace Inspector",
+  "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
   "version": "0.1.0",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
@@ -42,7 +42,7 @@
       "activitybar": [
         {
           "id": "foundryInspector",
-          "title": "AI Foundry Inspector",
+          "title": "Foundry Trace Inspector",
           "icon": "images/icon-sidebar.svg"
         }
       ]
@@ -51,7 +51,7 @@
       "foundryInspector": [
         {
           "id": "foundryInspector.sidebar",
-          "name": "AI Foundry Inspector",
+          "name": "Foundry Trace Inspector",
           "icon": "images/icon-sidebar.svg"
         }
       ]
@@ -79,35 +79,40 @@
       },
       {
         "command": "foundryInspector.openOnboarding",
-        "title": "AI Foundry: Setup / Configure",
+        "title": "Foundry Trace: Setup / Configure",
         "icon": "$(gear)"
       },
       {
         "command": "foundryInspector.refresh",
-        "title": "AI Foundry: Refresh",
+        "title": "Foundry Trace: Refresh",
         "icon": "$(refresh)"
       },
       {
         "command": "foundryInspector.openConversation",
-        "title": "AI Foundry: Open Conversation"
+        "title": "Foundry Trace: Open Conversation"
       },
       {
         "command": "foundryInspector.openResponse",
-        "title": "AI Foundry: Open Response"
+        "title": "Foundry Trace: Open Response"
       },
       {
         "command": "foundryInspector.addConversation",
-        "title": "AI Foundry: Add Conversation ID",
+        "title": "Foundry Trace: Add Conversation ID",
         "icon": "$(add)"
       },
       {
         "command": "foundryInspector.addResponse",
-        "title": "AI Foundry: Add Response ID",
+        "title": "Foundry Trace: Add Response ID",
         "icon": "$(add)"
       },
       {
         "command": "foundryInspector.deleteResponse",
-        "title": "AI Foundry: Delete Response",
+        "title": "Foundry Trace: Delete Response",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "foundryInspector.deleteConversation",
+        "title": "Foundry Trace: Delete Conversation",
         "icon": "$(trash)"
       }
     ],
@@ -139,11 +144,16 @@
           "command": "foundryInspector.deleteResponse",
           "when": "view == foundryInspector.sidebar && viewItem == response",
           "group": "inline"
+        },
+        {
+          "command": "foundryInspector.deleteConversation",
+          "when": "view == foundryInspector.sidebar && viewItem == conversation",
+          "group": "inline"
         }
       ]
     },
     "configuration": {
-      "title": "AI Foundry Agent Inspector",
+      "title": "Foundry Trace Inspector",
       "properties": {
         "aiFoundryAgentInspector.projectEndpoint": {
           "type": "string",

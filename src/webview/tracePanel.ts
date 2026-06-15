@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { TraceAgent } from "../trace/model";
+import { getConnectionState, setConnectionState } from "../sidebar/connectionState";
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let _onRevealSidebar: ((responseId: string) => void) | undefined;
@@ -38,15 +39,24 @@ export function showTracePanel(
     } else if (msg.type === "viewTrace") {
       const respId: string = msg.responseId;
       if (!respId) { return; }
+      // Save to settings so it persists across sessions
       const cfg = vscode.workspace.getConfiguration("aiFoundryAgentInspector");
       const existing = cfg.get<string[]>("responseIds", []);
       if (!existing.includes(respId)) {
         await cfg.update("responseIds", [...existing, respId], vscode.ConfigurationTarget.Global);
       }
-      await vscode.commands.executeCommand("foundryInspector.silentRefresh");
+      // Immediately add a placeholder to the sidebar so the entry appears without waiting for a full API refresh
+      const state = getConnectionState();
+      if (!state.responses.find(r => r.id === respId)) {
+        setConnectionState({ responses: [...state.responses, { id: respId }] });
+      }
+      // Open the individual response trace (sets _onRevealSidebar via showTracePanel)
       await vscode.commands.executeCommand("foundryInspector.openResponse", { id: respId });
-      // Reveal after a tick so the tree has re-rendered and cache is populated
-      setTimeout(() => { if (_onRevealSidebar) { _onRevealSidebar(respId); } }, 200);
+      // Hydrate full metadata, then reveal — ensures the tree item exists in the cache before reveal
+      await vscode.commands.executeCommand("foundryInspector.silentRefresh");
+      setTimeout(() => {
+        if (_onRevealSidebar) { _onRevealSidebar(respId); }
+      }, 200);
     }
   }, null, context.subscriptions);
 
@@ -1120,7 +1130,7 @@ function buildHtml(agents: TraceAgent[]): string {
           barAreaEl.appendChild(track);
           barAreaEl.appendChild(inBar);
           barAreaEl.appendChild(outBar);
-          rightEl = el('div', {'class': 'span-tokens'}, fmtCost(spanCost));
+          rightEl = el('div', {'class': 'span-tokens span-cost-split'}, fmtCost(spanCost));
         } else {
           barAreaEl.appendChild(el('div', {'class': 'span-bar-track'}));
           rightEl = el('div', {'class': 'span-tokens'}, spanCost === 0 ? '—' : '');
@@ -1154,6 +1164,12 @@ function buildHtml(agents: TraceAgent[]): string {
         if (span.model) { addRow('Model', span.model); }
         if (span.tokens) {
           addRow('Tokens', \`\${span.tokens.input} in + \${span.tokens.output} out = \${span.tokens.total} total\`);
+          const _tp = lookupPricing(span.model);
+          if (_tp) {
+            const _inCost  = (span.tokens.input  / 1_000_000) * _tp.input;
+            const _outCost = (span.tokens.output / 1_000_000) * _tp.output;
+            addRow('Cost', \`\${fmtCost(_inCost)} in + \${fmtCost(_outCost)} out = \${fmtCost(_inCost + _outCost)} total\`);
+          }
         }
         if (span.content) {
           drawer.appendChild(el('div', {'class': 'detail-content'}, span.content));
