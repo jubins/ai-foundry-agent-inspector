@@ -78,13 +78,21 @@ If using an API key, click **Set API Key** in the setup panel — your key is st
 
 ![Auth setup walkthrough](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/auth-setup.gif)
 
-### 3. Add a response ID
+### 3. Track a conversation or response
 
-1. In the Foundry portal, open your agent → **Traces** tab → click a trace
-2. Copy the `resp_...` ID from the URL or detail pane
-3. In VS Code, click **+** next to **Responses** in the sidebar and paste the ID
+**Option A — Track a conversation (recommended)**
 
-The extension fetches the trace and displays it immediately.
+1. In the Foundry portal, open your agent → **Traces** tab → copy the `conv_...` conversation ID
+2. In VS Code, click **+** next to **Conversations** in the sidebar and paste the ID
+
+All responses in that conversation are discovered automatically and appear in the sidebar.
+
+**Option B — Track an individual response**
+
+1. In the Foundry portal, open your agent → **Traces** tab → click a trace and copy the `resp_...` ID
+2. In VS Code, click **+** next to **Responses** in the sidebar and paste the ID
+
+The extension fetches and displays that trace immediately.
 
 ![User conversation view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/user-conversation-view.png)
 
