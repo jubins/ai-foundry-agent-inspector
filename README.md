@@ -23,9 +23,20 @@ A chat-bubble replay of the conversation: user messages and assistant replies re
 ### Token & Cost chart
 A stacked bar chart (input vs output tokens per LLM turn) so you can spot the expensive turns at a glance.
 
-| Duration | Tokens | Cost |
-|----------|--------|------|
-| ![Trajectories duration view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-duration.png) | ![Trajectories tokens view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-tokens.png) | ![Trajectories cost view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-cost.png) |
+#### Duration
+Per-span timing bars — see exactly how long each step took.
+
+![Trajectories duration view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-duration.png)
+
+#### Tokens
+Input vs output token breakdown per span.
+
+![Trajectories tokens view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-tokens.png)
+
+#### Cost
+Dollar cost per LLM and tool call — spot the expensive turns at a glance.
+
+![Trajectories cost view](https://pub-72ba0f5d1e084c06abd6df442452f0cf.r2.dev/images/trajectories-cost.png)
 
 ---
 
