@@ -2,7 +2,7 @@
   "name": "foundry-trace-inspector",
   "displayName": "Foundry Trace Inspector",
   "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
   "repository": {
@@ -35,7 +35,7 @@
     "llm",
     "openai"
   ],
-  "activationEvents": [],
+  "activationEvents": ["*"],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -201,7 +201,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run bundle",
-    "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify --define:import.meta.url=__filename && node scripts/patch-bundle.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
