@@ -9,20 +9,24 @@ import { FoundryTreeProvider, loadConnectionData } from "./sidebar/foundryTreePr
 import type { ConversationSummary, ResponseSummary } from "./sidebar/connectionState";
 
 export function activate(context: vscode.ExtensionContext): void {
-  const out = getOutputChannel();
-  const { secrets } = context;
+  try {
+    const out = getOutputChannel();
+    out.appendLine("Foundry Inspector: activate() called");
+    const { secrets } = context;
 
-  // ── Sidebar tree ───────────────────────────────────────────────────────────
-  const treeProvider = new FoundryTreeProvider(context);
-  const treeView = vscode.window.createTreeView("foundryInspector.sidebar", {
-    treeDataProvider: treeProvider,
-    showCollapseAll: false,
-  });
-  context.subscriptions.push(treeView);
-  treeProvider.setTreeView(treeView);
+    // ── Sidebar tree ───────────────────────────────────────────────────────────
+    const treeProvider = new FoundryTreeProvider(context);
+    const treeView = vscode.window.createTreeView("foundryInspector.sidebar", {
+      treeDataProvider: treeProvider,
+      showCollapseAll: false,
+    });
+    context.subscriptions.push(treeView);
+    treeProvider.setTreeView(treeView);
 
-  // Auto-load on activation if already configured
-  loadConnectionData(context, out).catch(() => {});
+    out.appendLine("Foundry Inspector: tree view registered");
+
+    // Auto-load on activation if already configured
+    loadConnectionData(context, out).catch(() => {});
 
   // ── Sidebar commands ───────────────────────────────────────────────────────
   context.subscriptions.push(
@@ -160,6 +164,13 @@ export function activate(context: vscode.ExtensionContext): void {
       showTrace(context, secrets, out)
     )
   );
+
+  out.appendLine("Foundry Inspector: all commands registered successfully");
+  out.show(true);
+  } catch (err) {
+    vscode.window.showErrorMessage(`Foundry Inspector failed to activate: ${err instanceof Error ? err.message : String(err)}`);
+    console.error("Foundry Inspector activation error:", err);
+  }
 }
 
 export function deactivate(): void {
