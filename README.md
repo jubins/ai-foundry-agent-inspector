@@ -1,5 +1,7 @@
 # Foundry Trace Inspector
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/02612f68c7b643fb9c7d5bebb00c2ab0)](https://app.codacy.com/gh/jubins/ai-foundry-agent-inspector?utm_source=github.com&utm_medium=referral&utm_content=jubins/ai-foundry-agent-inspector&utm_campaign=Badge_Grade)
+
 Inspect Azure AI Foundry agent traces without leaving VS Code. **Free, open source.**
 
 See exactly what your agent did on every run — which tools it called, what it sent and received, how many tokens each LLM turn cost, and the duration and dollar cost — all in an interactive timeline panel. Track multiple conversations and responses from the Activity Bar.
