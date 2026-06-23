@@ -20,7 +20,8 @@ export function openOnboardingPanel(context: vscode.ExtensionContext): void {
   );
 
   const config = getConfig();
-  _panel.webview.html = buildHtml(config.projectEndpoint, config.authMethod);
+  const isWeb = typeof process === "undefined" || process.browser === true;
+  _panel.webview.html = buildHtml(config.projectEndpoint, config.authMethod, isWeb);
 
   _panel.webview.onDidReceiveMessage(
     async (msg) => {
@@ -112,7 +113,7 @@ export function openOnboardingPanel(context: vscode.ExtensionContext): void {
   _panel.onDidDispose(() => { _panel = undefined; }, null, context.subscriptions);
 }
 
-function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
+function buildHtml(currentEndpoint: string, currentAuthMethod: string, isWeb = false): string {
   const endpoint = currentEndpoint.replace(/"/g, "&quot;");
   const isApiKey = currentAuthMethod === "apiKey";
 
@@ -296,7 +297,9 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string): string {
         </label>
       </div>
       <p class="hint" id="entraHint" style="${!isApiKey ? "" : "display:none"}">
-        Requires the Azure CLI — run <code>brew install azure-cli</code> then <code>az login</code> in a terminal before testing the connection.
+        ${isWeb
+          ? '<strong style="color:#f48771;">Not supported in VS Code for the Web.</strong> Switch to API Key authentication below.'
+          : 'Requires the Azure CLI — run <code>brew install azure-cli</code> then <code>az login</code> in a terminal before testing the connection.'}
       </p>
     </div>
 
