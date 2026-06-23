@@ -20,12 +20,18 @@ build({
           return { path: path.resolve(__dirname, "../src/client.web.ts") };
         });
 
-        // Stub out Node built-in modules that appear in unreachable SDK code paths
-        // (datasets/models submodules never called by this extension on web).
+        // Stub out Node built-in modules and @azure/core-xml.
+        // @azure/core-xml runs DOM code at module load time (document.implementation.createDocument)
+        // which crashes in the VS Code Web extension host (a web worker with no DOM).
+        // This extension never does XML parsing so a no-op stub is safe.
         const nodeBuiltins = ["fs", "path", "stream", "buffer", "util", "events", "os", "crypto", "http", "https", "net", "tls", "zlib", "child_process"];
         const builtinFilter = new RegExp(`^(node:)?(${nodeBuiltins.join("|")})$`);
         build.onResolve({ filter: builtinFilter }, (args) => ({
           path: args.path,
+          namespace: "node-stub",
+        }));
+        build.onResolve({ filter: /^@azure\/core-xml$/ }, () => ({
+          path: "@azure/core-xml",
           namespace: "node-stub",
         }));
         build.onLoad({ filter: /.*/, namespace: "node-stub" }, () => ({

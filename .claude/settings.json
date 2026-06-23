@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(/[\\\\/\\\\\\\\\\\\\\\\]client\\\\$/.test\\('../client'\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git -C /Users/jubinsoni/Documents/GitHub/ai-foundry-agent-inspector diff --stat)"
+    ]
+  }
+}
