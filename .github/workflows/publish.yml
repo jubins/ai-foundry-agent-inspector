@@ -45,9 +45,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           npm version "$VERSION_BUMP" -m "chore: bump version to %s"
+          # If a previous run created the tag but failed to push the branch,
+          # delete the stale remote tag so this run can recreate it cleanly.
+          NEW_TAG="v$(node -p "require('./package.json').version")"
+          if git ls-remote --tags origin | grep -q "refs/tags/${NEW_TAG}$"; then
+            git push origin --delete "${NEW_TAG}" || true
+          fi
 
       - name: Push version commit and tag
-        run: git push --follow-tags
+        run: |
+          git pull --rebase origin master
+          git push --follow-tags
 
       - name: Publish to VS Code Marketplace
         run: npx vsce publish --no-dependencies
