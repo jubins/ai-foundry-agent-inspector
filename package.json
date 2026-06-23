@@ -37,6 +37,8 @@
   ],
   "activationEvents": ["*"],
   "main": "./out/extension.js",
+  "browser": "./out/extension.web.js",
+  "extensionKind": ["ui", "workspace"],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -200,8 +202,9 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run bundle",
+    "vscode:prepublish": "npm run bundle && npm run bundle:web",
     "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify --define:import.meta.url=__filename && node scripts/patch-bundle.js",
+    "bundle:web": "node scripts/bundle-web.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
