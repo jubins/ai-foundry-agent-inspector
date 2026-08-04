@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`foundry-trace-inspector-core`** npm package — a headless library exposing the Foundry client, OpenAI client builder, trace normalizer, and typed trace model, so traces can be fetched and normalized from any Node.js code
+- **`foundry-trace-inspector-cli`** npm package — a `foundry-trace` command that fetches responses and conversations and prints them as a readable tree or JSON, with API key or Entra ID auth via flags or environment variables
+- npm and Marketplace version badges in the README
+
+### Changed
+- Repository restructured into npm workspaces; the extension now consumes the shared `foundry-trace-inspector-core` package instead of its own copies of the client and normalizer
+- Renamed "Azure AI Foundry" to "Microsoft Foundry" throughout the docs, UI, and package metadata
+- Publish workflow now bumps the extension and both npm packages in lockstep and publishes to the VS Code Marketplace, npm, and GitHub Releases in a single run
+
+---
+
+## [0.1.5] - 2026-06-23
+
+### Added
+- Manual publish workflow for the VS Code Marketplace (`workflow_dispatch` with a patch/minor/major version bump)
+- Dependabot configuration for dependency updates
+
+### Fixed
+- Errors in the publish workflow that prevented Marketplace releases
+
+---
+
 ## [0.1.4] - 2026-06-23
 
 ### Added
