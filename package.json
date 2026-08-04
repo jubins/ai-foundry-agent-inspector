@@ -212,7 +212,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run bundle && npm run bundle:web",
+    "build:packages": "npm run build --workspace foundry-trace-inspector-core",
+    "prebundle": "npm run build:packages",
     "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify --define:import.meta.url=__filename && node scripts/patch-bundle.js",
+    "prebundle:web": "npm run build:packages",
     "bundle:web": "node scripts/bundle-web.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
