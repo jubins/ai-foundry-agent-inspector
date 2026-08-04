@@ -14,6 +14,7 @@ on:
           - major
 
 # Restrict to master only and grant write access for pushing the version tag
+# and creating the GitHub Release.
 permissions:
   contents: write
 
@@ -30,34 +31,72 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run bundle && npm run bundle:web
-
-      - name: Bump version
-        # Use an environment variable to avoid shell injection from workflow input
+      - name: Bump version (extension + npm packages in lockstep)
+        # Use an environment variable to avoid shell injection from workflow input.
         env:
           VERSION_BUMP: ${{ github.event.inputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version "$VERSION_BUMP" -m "chore: bump version to %s"
-          # If a previous run created the tag but failed to push the branch,
-          # delete the stale remote tag so this run can recreate it cleanly.
-          NEW_TAG="v$(node -p "require('./package.json').version")"
-          if git ls-remote --tags origin | grep -q "refs/tags/${NEW_TAG}$"; then
-            git push origin --delete "${NEW_TAG}" || true
-          fi
 
-      - name: Push version commit and tag
-        run: |
-          git pull --rebase origin master
-          git push --follow-tags
+          # Bump the root (extension) manifest without tagging; capture the new version.
+          npm version "$VERSION_BUMP" --no-git-tag-version
+          NEW_VERSION="$(node -p "require('./package.json').version")"
+          echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+
+          # Keep the npm packages and the extension's dependency on core in lockstep.
+          npm version "$NEW_VERSION" --no-git-tag-version --workspace foundry-trace-inspector-core
+          npm version "$NEW_VERSION" --no-git-tag-version --workspace foundry-trace-inspector-cli
+          node scripts/sync-core-dep-version.js "$NEW_VERSION"
+
+          # Refresh the lockfile so the bumped versions are recorded.
+          npm install --package-lock-only
+
+          git add package.json package-lock.json packages/core/package.json packages/cli/package.json
+          git commit -m "Release ${NEW_VERSION}"
+
+          TAG="v${NEW_VERSION}"
+          # If a previous run created the tag but failed to push, delete the stale
+          # remote tag so this run can recreate it cleanly.
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            git push origin --delete "${TAG}" || true
+          fi
+          git tag -a "${TAG}" -m "Release ${NEW_VERSION}"
+
+      - name: Push release commit and tag
+        run: git push --follow-tags origin master
+
+      - name: Build
+        run: npm run bundle && npm run bundle:web
+
+      - name: Package .vsix
+        run: npx vsce package --no-dependencies --out "foundry-trace-inspector-${NEW_VERSION}.vsix"
 
       - name: Publish to VS Code Marketplace
-        run: npx vsce publish --no-dependencies
+        run: npx vsce publish --no-dependencies --packagePath "foundry-trace-inspector-${NEW_VERSION}.vsix"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT_JS }}
+
+      - name: Publish core to npm
+        run: npm publish --workspace foundry-trace-inspector-core --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish CLI to npm
+        run: npm publish --workspace foundry-trace-inspector-cli --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --generate-notes \
+            "foundry-trace-inspector-${NEW_VERSION}.vsix#Foundry Trace Inspector (.vsix)"

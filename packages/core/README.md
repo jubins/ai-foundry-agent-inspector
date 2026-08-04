@@ -5,7 +5,6 @@
 # foundry-trace-inspector-core
 
 [![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core.svg)](https://www.npmjs.com/package/foundry-trace-inspector-core)
-[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/jubinsoni.foundry-trace-inspector.png?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
 [![CI](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE)
 
@@ -13,11 +12,10 @@
 
 </div>
 
-The headless engine behind the
-[Foundry Trace Inspector](https://github.com/jubins/ai-foundry-agent-inspector)
-VS Code extension and the `foundry-trace` CLI — extracted so you can build your
-own tooling (dashboards, CI assertions, scripts) on top of it. No VS Code, no UI,
-just the Foundry client and the trace normalizer.
+A headless library for fetching Microsoft Foundry agent traces and normalizing
+them into a clean, typed model you can build on — dashboards, CI assertions,
+scripts, or any tooling of your own. Just the Foundry client and the trace
+normalizer, no UI.
 
 Works for any model hosted on Foundry (GPT, Claude, Grok, Kimi, and others).
 

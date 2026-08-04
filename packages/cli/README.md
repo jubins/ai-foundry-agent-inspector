@@ -5,7 +5,6 @@
 # foundry-trace-inspector-cli
 
 [![npm](https://img.shields.io/npm/v/foundry-trace-inspector-cli.svg)](https://www.npmjs.com/package/foundry-trace-inspector-cli)
-[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/jubinsoni.foundry-trace-inspector.png?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
 [![CI](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE)
 
@@ -13,10 +12,9 @@
 
 </div>
 
-No VS Code required. Built on
-[`foundry-trace-inspector-core`](https://www.npmjs.com/package/foundry-trace-inspector-core),
-so you get the same trace normalization as the VS Code extension, printed as a
-readable tree or JSON.
+Fetch responses and conversations from a Microsoft Foundry project and print
+them as a readable tree or JSON — straight from the command line. Built on
+[`foundry-trace-inspector-core`](https://www.npmjs.com/package/foundry-trace-inspector-core).
 
 Works for any model hosted on Foundry (GPT, Claude, Grok, Kimi, and others).
 
