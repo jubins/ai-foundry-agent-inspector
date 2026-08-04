@@ -1,5 +1,9 @@
 # foundry-trace-inspector-cli
 
+[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-cli?label=npm)](https://www.npmjs.com/package/foundry-trace-inspector-cli)
+[![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jubinsoni.foundry-trace-inspector?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE)
+
 Command-line tool to fetch and inspect [Microsoft Foundry](https://ai.azure.com)
 agent traces straight from your terminal — no VS Code required. Built on
 [`foundry-trace-inspector-core`](https://www.npmjs.com/package/foundry-trace-inspector-core).

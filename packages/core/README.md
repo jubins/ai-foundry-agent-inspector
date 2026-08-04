@@ -1,5 +1,9 @@
 # foundry-trace-inspector-core
 
+[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core?label=npm)](https://www.npmjs.com/package/foundry-trace-inspector-core)
+[![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jubinsoni.foundry-trace-inspector?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE)
+
 Headless library for connecting to [Microsoft Foundry](https://ai.azure.com) and
 normalizing agent traces into a clean, typed model. This is the engine behind the
 [Foundry Trace Inspector](https://github.com/jubins/ai-foundry-agent-inspector)
