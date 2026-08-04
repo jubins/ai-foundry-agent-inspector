@@ -1,7 +1,7 @@
 {
   "name": "foundry-trace-inspector-cli",
   "version": "0.1.0",
-  "description": "Command-line tool to fetch and inspect Azure AI Foundry agent traces from your terminal.",
+  "description": "Command-line tool to fetch and inspect Microsoft Foundry agent traces from your terminal.",
   "keywords": [
     "azure",
     "ai",

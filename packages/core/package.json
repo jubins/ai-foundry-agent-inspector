@@ -1,7 +1,7 @@
 {
   "name": "foundry-trace-inspector-core",
   "version": "0.1.0",
-  "description": "Headless library for connecting to Azure AI Foundry and normalizing agent traces into a clean, typed model.",
+  "description": "Headless library for connecting to Microsoft Foundry and normalizing agent traces into a clean, typed model.",
   "keywords": [
     "azure",
     "ai",

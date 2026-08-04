@@ -1,6 +1,6 @@
 # foundry-trace-inspector-cli
 
-Command-line tool to fetch and inspect [Azure AI Foundry](https://ai.azure.com)
+Command-line tool to fetch and inspect [Microsoft Foundry](https://ai.azure.com)
 agent traces straight from your terminal — no VS Code required. Built on
 [`foundry-trace-inspector-core`](https://www.npmjs.com/package/foundry-trace-inspector-core).
 

@@ -149,13 +149,13 @@ function normalizeResponseChain(
   let totalOutput = 0;
 
   for (const response of chain) {
-    // Extract trace ID from metadata if present (Azure AI Agents sets this)
+    // Extract trace ID from metadata if present (Microsoft Foundry Agents sets this)
     const meta = (response as unknown as { metadata?: Record<string, string> }).metadata;
     const traceId = meta?.["trace_id"] ?? meta?.["traceId"] ?? undefined;
     const responseId = response.id;
 
     // User message that prompted this response
-    // `input` is not on the retrieved Response type but Azure AI Agents includes it
+    // `input` is not on the retrieved Response type but Microsoft Foundry Agents includes it
     const userText = extractInputText((response as unknown as { input?: unknown }).input);
     if (userText) {
       steps.push({

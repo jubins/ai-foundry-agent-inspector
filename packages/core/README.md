@@ -1,6 +1,6 @@
 # foundry-trace-inspector-core
 
-Headless library for connecting to [Azure AI Foundry](https://ai.azure.com) and
+Headless library for connecting to [Microsoft Foundry](https://ai.azure.com) and
 normalizing agent traces into a clean, typed model. This is the engine behind the
 [Foundry Trace Inspector](https://github.com/jubins/ai-foundry-agent-inspector)
 VS Code extension and the `foundry-trace` CLI — extracted so you can build your

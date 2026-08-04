@@ -28,7 +28,7 @@ export function createClient(
     }
 
     // Inject the API key as an `api-key` header via a pipeline policy.
-    // This is how Azure AI services accept API key auth alongside Entra ID.
+    // This is how Microsoft Foundry services accept API key auth alongside Entra ID.
     const keyToCapture = apiKey;
     return new AIProjectClient(config.projectEndpoint, new NoOpCredential(), {
       additionalPolicies: [

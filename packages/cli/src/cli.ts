@@ -9,7 +9,7 @@ import {
 import { parseArgs, flagString, flagBool } from "./args";
 import { renderTrace } from "./render";
 
-const HELP = `foundry-trace — inspect Azure AI Foundry agent traces from the terminal
+const HELP = `foundry-trace — inspect Microsoft Foundry agent traces from the terminal
 
 Usage:
   foundry-trace show <resp_...> [<resp_...> ...]   Fetch and print one or more responses

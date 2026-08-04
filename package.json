@@ -1,7 +1,7 @@
 {
   "name": "foundry-trace-inspector",
   "displayName": "Foundry Trace Inspector",
-  "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
+  "description": "Inspect Microsoft Foundry agent traces directly in VS Code",
   "version": "0.1.5",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
@@ -169,7 +169,7 @@
         "aiFoundryAgentInspector.projectEndpoint": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Your Azure AI Foundry project endpoint URL (e.g. `https://<hub>.services.ai.azure.com/api/projects/<project>`)"
+          "markdownDescription": "Your Microsoft Foundry project endpoint URL (e.g. `https://<hub>.services.ai.azure.com/api/projects/<project>`)"
         },
         "aiFoundryAgentInspector.authMethod": {
           "type": "string",

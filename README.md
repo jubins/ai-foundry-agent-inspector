@@ -4,7 +4,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/0ff719144efc4b799a428ee5d785b11f)](https://app.codacy.com/gh/jubins/ai-foundry-agent-inspector/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-Inspect Azure AI Foundry agent traces without leaving VS Code. See exactly what your agent did — which tools it called, what it sent and received, token counts, cost, and timing — all in an interactive timeline panel.
+Inspect Microsoft Foundry agent traces without leaving VS Code. See exactly what your agent did — which tools it called, what it sent and received, token counts, cost, and timing — all in an interactive timeline panel.
 
 > Free and open source. No account, no subscription, no telemetry.
 
@@ -105,14 +105,14 @@ All actions are available from the Activity Bar panel and the Command Palette (`
 
 ## Privacy
 
-This extension makes API calls only to the Azure AI Foundry endpoint you configure. No usage data, telemetry, or trace content is sent anywhere else.
+This extension makes API calls only to the Microsoft Foundry endpoint you configure. No usage data, telemetry, or trace content is sent anywhere else.
 
 ---
 
 ## Requirements
 
 - VS Code 1.85 or later (desktop or [vscode.dev](https://vscode.dev))
-- An Azure AI Foundry project with at least one agent
+- A Microsoft Foundry project with at least one agent
 - An API key **or** Azure CLI (`az login`) / managed identity
 
 ---

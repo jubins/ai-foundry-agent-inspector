@@ -250,7 +250,7 @@ function buildHtml(currentEndpoint: string, currentAuthMethod: string, isWeb = f
 <body>
 
 <h1>🔍 Foundry Trace Inspector</h1>
-<p class="subtitle">Connect to your Azure AI Foundry project to browse conversations and inspect agent traces.</p>
+<p class="subtitle">Connect to your Microsoft Foundry project to browse conversations and inspect agent traces.</p>
 <p class="privacy-note">🔒 Your API keys and project data are never sent to any server outside your own Azure endpoint. Nothing is stored or logged by this extension beyond what VS Code persists locally.</p>
 
 <!-- Step 1: Endpoint -->
