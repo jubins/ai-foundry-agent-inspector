@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 - Repository restructured into npm workspaces; the extension now consumes the shared `foundry-trace-inspector-core` package instead of its own copies of the client and normalizer
 - Renamed "Azure AI Foundry" to "Microsoft Foundry" throughout the docs, UI, and package metadata
-- Publish workflow now bumps the extension and both npm packages in lockstep and publishes to the VS Code Marketplace, npm, and GitHub Releases in a single run
+- Release workflow now bumps the extension and both npm packages in lockstep and publishes to the VS Code Marketplace, npm, and GitHub Releases in a single run
 
 ---
 
