@@ -1,5 +1,8 @@
 name: Release
 
+# One-click release. Bumps the extension and both npm packages in lockstep,
+# then tests, publishes to npm (core + cli) and the VS Code Marketplace in
+# parallel, and finally cuts a GitHub Release with notes from the changelog.
 on:
   workflow_dispatch:
     inputs:
@@ -13,15 +16,18 @@ on:
           - minor
           - major
 
-# Restrict to master only and grant write access for pushing the version tag
-# and creating the GitHub Release.
+# contents: write lets the bump job push the release commit/tag and the final
+# job create the GitHub Release.
 permissions:
   contents: write
 
 jobs:
-  release:
+  bump:
+    name: Bump versions
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,72 +37,167 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          registry-url: https://registry.npmjs.org
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Bump version (extension + npm packages in lockstep)
-        # Use an environment variable to avoid shell injection from workflow input.
+      - name: Bump extension + npm packages in lockstep
+        id: bump
         env:
           VERSION_BUMP: ${{ github.event.inputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Bump the root (extension) manifest without tagging; capture the new version.
+          # Bump the root (extension) manifest without tagging; capture the version.
           npm version "$VERSION_BUMP" --no-git-tag-version
           NEW_VERSION="$(node -p "require('./package.json').version")"
-          echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
-          # Keep the npm packages and the extension's dependency on core in lockstep.
+          # Keep the npm packages and the extension's dependency on core in sync.
           npm version "$NEW_VERSION" --no-git-tag-version --workspace foundry-trace-inspector-core
           npm version "$NEW_VERSION" --no-git-tag-version --workspace foundry-trace-inspector-cli
           node scripts/sync-core-dep-version.js "$NEW_VERSION"
-
-          # Refresh the lockfile so the bumped versions are recorded.
           npm install --package-lock-only
 
           git add package.json package-lock.json packages/core/package.json packages/cli/package.json
           git commit -m "Release ${NEW_VERSION}"
 
           TAG="v${NEW_VERSION}"
-          # If a previous run created the tag but failed to push, delete the stale
-          # remote tag so this run can recreate it cleanly.
+          # Recreate a stale tag from a previously failed run, if present.
           if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
             git push origin --delete "${TAG}" || true
           fi
           git tag -a "${TAG}" -m "Release ${NEW_VERSION}"
+          git push --follow-tags origin master
 
-      - name: Push release commit and tag
-        run: git push --follow-tags origin master
+  test:
+    name: Test & build
+    needs: bump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run bundle
+      - run: npm run bundle:web
 
-      - name: Build
-        run: npm run bundle && npm run bundle:web
-
-      - name: Package .vsix
-        run: npx vsce package --no-dependencies --out "foundry-trace-inspector-${NEW_VERSION}.vsix"
-
-      - name: Publish to VS Code Marketplace
-        run: npx vsce publish --no-dependencies --packagePath "foundry-trace-inspector-${NEW_VERSION}.vsix"
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT_JS }}
-
-      - name: Publish core to npm
+  publish-npm:
+    name: Publish to npm
+    needs: [bump, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      # Core first: the CLI depends on it.
+      - name: Publish core
         run: npm publish --workspace foundry-trace-inspector-core --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish CLI to npm
+      - name: Publish CLI
         run: npm publish --workspace foundry-trace-inspector-cli --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Release
+  publish-vscode:
+    name: Publish the VS Code extension
+    needs: [bump, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run bundle && npm run bundle:web
+      - name: Package .vsix
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          VERSION: ${{ needs.bump.outputs.version }}
+        run: npx --yes @vscode/vsce package --no-dependencies --out "foundry-trace-inspector-${VERSION}.vsix"
+      - name: Publish to the VS Code Marketplace
+        env:
+          VERSION: ${{ needs.bump.outputs.version }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT_JS }}
+        run: npx --yes @vscode/vsce publish --no-dependencies --packagePath "foundry-trace-inspector-${VERSION}.vsix"
+      - name: Upload .vsix for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: foundry-trace-inspector-${{ needs.bump.outputs.version }}.vsix
+
+  github-release:
+    name: Create the GitHub Release
+    needs: [bump, publish-npm, publish-vscode]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Download the packaged .vsix
+        uses: actions/download-artifact@v4
+        with:
+          name: vsix
+
+      - name: Extract this version's changelog notes
+        id: notes
+        env:
+          VERSION: ${{ needs.bump.outputs.version }}
         run: |
-          gh release create "v${NEW_VERSION}" \
-            --title "v${NEW_VERSION}" \
-            --generate-notes \
-            "foundry-trace-inspector-${NEW_VERSION}.vsix#Foundry Trace Inspector (.vsix)"
+          # Pull the notes for this version from CHANGELOG.md: prefer a
+          # "## [x.y.z]" section, and fall back to "## [Unreleased]" (the working
+          # section) when the version hasn't been renamed in yet. Trailing
+          # separators and blank lines are trimmed.
+          extract() {
+            awk -v h="$1" '
+              $0 ~ "^## \\[" h "\\]" {grab=1; next}
+              grab && /^## \[/ {exit}
+              grab {print}
+            ' CHANGELOG.md
+          }
+          NOTES="$(extract "$VERSION")"
+          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+            NOTES="$(extract "Unreleased")"
+          fi
+          # Drop the trailing "---" separator, then trailing blank lines.
+          NOTES="$(printf '%s\n' "$NOTES" \
+            | awk 'NR>1{print prev} {prev=$0} END{if (prev !~ /^-+$/) print prev}' \
+            | awk '{lines[NR]=$0} END{last=NR; while (last>0 && lines[last] ~ /^[[:space:]]*$/) last--; for(i=1;i<=last;i++) print lines[i]}')"
+          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then NOTES="Release v$VERSION"; fi
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo ""
+            echo "**npm (core):** https://www.npmjs.com/package/foundry-trace-inspector-core/v/$VERSION"
+            echo "**npm (cli):** https://www.npmjs.com/package/foundry-trace-inspector-cli/v/$VERSION"
+            echo "**VS Code Marketplace:** https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.bump.outputs.version }}
+          NOTES: ${{ steps.notes.outputs.notes }}
+        run: |
+          TAG="v$VERSION"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "$NOTES" \
+            "foundry-trace-inspector-${VERSION}.vsix#Foundry Trace Inspector (.vsix)"
