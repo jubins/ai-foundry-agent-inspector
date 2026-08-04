@@ -1,6 +1,6 @@
 {
   "name": "foundry-trace-inspector-cli",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Command-line tool to fetch and inspect Microsoft Foundry agent traces from your terminal.",
   "keywords": [
     "azure",
@@ -38,6 +38,6 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "foundry-trace-inspector-core": "^0.1.5"
+    "foundry-trace-inspector-core": "^0.2.0"
   }
 }

@@ -2,7 +2,7 @@
   "name": "foundry-trace-inspector",
   "displayName": "Foundry Trace Inspector",
   "description": "Inspect Microsoft Foundry agent traces directly in VS Code",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
   "repository": {
@@ -238,6 +238,6 @@
   "dependencies": {
     "@azure/ai-projects": "^2.2.0",
     "@azure/identity": "^4.13.1",
-    "foundry-trace-inspector-core": "^0.1.5"
+    "foundry-trace-inspector-core": "^0.2.0"
   }
 }
