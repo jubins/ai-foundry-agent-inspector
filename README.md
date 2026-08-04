@@ -1,12 +1,20 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/jubins/ai-foundry-agent-inspector/master/images/icon.png" alt="Foundry Trace Inspector" width="96" height="96" />
+
 # Foundry Trace Inspector
 
-[![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jubinsoni.foundry-trace-inspector?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
-[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core?label=npm)](https://www.npmjs.com/package/foundry-trace-inspector-core)
-[![Build](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/jubinsoni.foundry-trace-inspector.png?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
+[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core.svg?label=npm%20core)](https://www.npmjs.com/package/foundry-trace-inspector-core)
+[![CI](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/0ff719144efc4b799a428ee5d785b11f)](https://app.codacy.com/gh/jubins/ai-foundry-agent-inspector/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Inspect Microsoft Foundry agent traces without leaving VS Code. See exactly what your agent did — which tools it called, what it sent and received, token counts, cost, and timing — all in an interactive timeline panel.
+**Inspect Microsoft Foundry agent traces without leaving VS Code.**
+
+</div>
+
+See exactly what your agent did — which tools it called, what it sent and received, token counts, cost, and timing — all in an interactive timeline panel.
 
 > Free and open source. No account, no subscription, no telemetry.
 

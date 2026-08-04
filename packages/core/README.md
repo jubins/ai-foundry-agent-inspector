@@ -1,16 +1,25 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/jubins/ai-foundry-agent-inspector/master/images/icon.png" alt="Foundry Trace Inspector" width="96" height="96" />
+
 # foundry-trace-inspector-core
 
-[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core?label=npm)](https://www.npmjs.com/package/foundry-trace-inspector-core)
-[![Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jubinsoni.foundry-trace-inspector?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
+[![npm](https://img.shields.io/npm/v/foundry-trace-inspector-core.svg)](https://www.npmjs.com/package/foundry-trace-inspector-core)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/jubinsoni.foundry-trace-inspector.png?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=jubinsoni.foundry-trace-inspector)
+[![CI](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/jubins/ai-foundry-agent-inspector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE)
 
-Headless library for connecting to [Microsoft Foundry](https://ai.azure.com) and
-normalizing agent traces into a clean, typed model. This is the engine behind the
+**Connect to Microsoft Foundry and normalize agent traces into a clean, typed model.**
+
+</div>
+
+The headless engine behind the
 [Foundry Trace Inspector](https://github.com/jubins/ai-foundry-agent-inspector)
 VS Code extension and the `foundry-trace` CLI — extracted so you can build your
-own tooling (dashboards, CI assertions, scripts) on top of it.
+own tooling (dashboards, CI assertions, scripts) on top of it. No VS Code, no UI,
+just the Foundry client and the trace normalizer.
 
-It works for any model hosted on Foundry (GPT, Claude, Grok, Kimi, and others).
+Works for any model hosted on Foundry (GPT, Claude, Grok, Kimi, and others).
 
 ## Install
 
@@ -66,4 +75,4 @@ optional `apiKey` (required for API-key auth) and a `logger` for diagnostics.
 
 ## License
 
-MIT
+[MIT](https://github.com/jubins/ai-foundry-agent-inspector/blob/master/LICENSE) © Jubin Soni
