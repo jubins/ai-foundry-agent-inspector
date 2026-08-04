@@ -1,0 +1,10 @@
+# Codacy configuration.
+# https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+---
+exclude_paths:
+  # Build/release tooling that legitimately reads and writes known project
+  # manifests from a fixed, hardcoded list of paths. Codacy's "dynamic file
+  # access" security rule flags the fs calls as a false positive because the
+  # paths are variables, even though they are constants derived from __dirname
+  # and never from external input.
+  - 'scripts/sync-core-dep-version.js'
