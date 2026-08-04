@@ -21,6 +21,10 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "workspaces": [
+    "packages/core",
+    "packages/cli"
+  ],
   "categories": [
     "Other",
     "Debuggers"
@@ -230,6 +234,7 @@
   },
   "dependencies": {
     "@azure/ai-projects": "^2.2.0",
-    "@azure/identity": "^4.13.1"
+    "@azure/identity": "^4.13.1",
+    "foundry-trace-inspector-core": "^0.1.0"
   }
 }

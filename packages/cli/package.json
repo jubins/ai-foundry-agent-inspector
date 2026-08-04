@@ -1,0 +1,43 @@
+{
+  "name": "foundry-trace-inspector-cli",
+  "version": "0.1.0",
+  "description": "Command-line tool to fetch and inspect Azure AI Foundry agent traces from your terminal.",
+  "keywords": [
+    "azure",
+    "ai",
+    "foundry",
+    "agent",
+    "trace",
+    "cli",
+    "llm"
+  ],
+  "author": "Jubin Soni",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/jubins/ai-foundry-agent-inspector/tree/master/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector/issues"
+  },
+  "type": "commonjs",
+  "bin": {
+    "foundry-trace": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "foundry-trace-inspector-core": "^0.1.0"
+  }
+}

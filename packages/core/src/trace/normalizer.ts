@@ -9,7 +9,7 @@ import type {
   StepStatus,
   TokenUsage,
 } from "./model";
-import type { OutputChannel } from "../outputChannel";
+import type { Logger } from "../logger";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -546,7 +546,7 @@ export async function normalizeFromThreads(
   assistants: OpenAI.Beta.Assistants.Assistant[],
   threads: Array<{ id: string; created_at: number; metadata: Record<string, string> }>,
   maxRuns: number,
-  out: OutputChannel
+  out: Logger
 ): Promise<TraceAgent[]> {
   out.appendLine("normalizeFromThreads called (legacy path)");
   return [];

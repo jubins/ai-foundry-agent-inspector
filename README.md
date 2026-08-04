@@ -117,6 +117,21 @@ This extension makes API calls only to the Azure AI Foundry endpoint you configu
 
 ---
 
+## Beyond VS Code
+
+The trace engine also ships as standalone npm packages, so you can inspect Foundry traces from scripts, CI, or the terminal:
+
+| Package | Use it for |
+|---|---|
+| [`foundry-trace-inspector-core`](./packages/core) | A headless library — connect to Foundry and normalize traces into a typed model in your own code |
+| [`foundry-trace-inspector-cli`](./packages/cli) | A `foundry-trace` command to fetch and print traces from the terminal |
+
+```bash
+npx foundry-trace-inspector-cli show resp_abc123 --endpoint <your-project-endpoint>
+```
+
+---
+
 ## Contributing
 
 Issues and pull requests are welcome at [github.com/jubins/ai-foundry-agent-inspector](https://github.com/jubins/ai-foundry-agent-inspector/issues).

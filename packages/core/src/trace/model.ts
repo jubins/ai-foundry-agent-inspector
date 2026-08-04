@@ -1,5 +1,4 @@
 // Normalized internal trace model — independent of the Foundry SDK shape.
-// Phase 3 renders this; Phase 2 produces it.
 
 export type StepKind = "llm" | "toolCall" | "message";
 export type MessageRole = "user" | "assistant" | "system";
