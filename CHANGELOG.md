@@ -70,6 +70,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Initial release
 - Trajectories view — collapsible span tree with Gantt-style timing bars, duration, and token counts
-- Fetch and display agent traces from Azure AI Foundry via the OpenAI Responses API
+- Fetch and display agent traces from Microsoft Foundry via the OpenAI Responses API
 - API key and Entra ID (`DefaultAzureCredential`) authentication
 - VS Code settings for project endpoint, auth method, and max runs to list

@@ -1,0 +1,40 @@
+{
+  "name": "foundry-trace-inspector-core",
+  "version": "0.1.5",
+  "description": "Headless library for connecting to Microsoft Foundry and normalizing agent traces into a clean, typed model.",
+  "keywords": [
+    "azure",
+    "ai",
+    "foundry",
+    "agent",
+    "trace",
+    "llm",
+    "openai"
+  ],
+  "author": "Jubin Soni",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/jubins/ai-foundry-agent-inspector/tree/master/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/jubins/ai-foundry-agent-inspector/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p ./",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@azure/ai-projects": "^2.2.0",
+    "@azure/identity": "^4.13.1",
+    "openai": "^6.0.0"
+  }
+}

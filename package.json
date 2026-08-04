@@ -1,7 +1,7 @@
 {
   "name": "foundry-trace-inspector",
   "displayName": "Foundry Trace Inspector",
-  "description": "Inspect Azure AI Foundry agent traces directly in VS Code",
+  "description": "Inspect Microsoft Foundry agent traces directly in VS Code",
   "version": "0.1.5",
   "publisher": "jubinsoni",
   "icon": "images/icon.png",
@@ -21,6 +21,10 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "workspaces": [
+    "packages/core",
+    "packages/cli"
+  ],
   "categories": [
     "Other",
     "Debuggers"
@@ -165,7 +169,7 @@
         "aiFoundryAgentInspector.projectEndpoint": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Your Azure AI Foundry project endpoint URL (e.g. `https://<hub>.services.ai.azure.com/api/projects/<project>`)"
+          "markdownDescription": "Your Microsoft Foundry project endpoint URL (e.g. `https://<hub>.services.ai.azure.com/api/projects/<project>`)"
         },
         "aiFoundryAgentInspector.authMethod": {
           "type": "string",
@@ -208,7 +212,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run bundle && npm run bundle:web",
+    "build:packages": "npm run build --workspace foundry-trace-inspector-core",
+    "prebundle": "npm run build:packages",
     "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify --define:import.meta.url=__filename && node scripts/patch-bundle.js",
+    "prebundle:web": "npm run build:packages",
     "bundle:web": "node scripts/bundle-web.js",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
@@ -230,6 +237,7 @@
   },
   "dependencies": {
     "@azure/ai-projects": "^2.2.0",
-    "@azure/identity": "^4.13.1"
+    "@azure/identity": "^4.13.1",
+    "foundry-trace-inspector-core": "^0.1.5"
   }
 }

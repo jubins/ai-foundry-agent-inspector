@@ -1,14 +1,9 @@
 import * as vscode from "vscode";
+import type { AuthMethod, FoundryConfig } from "foundry-trace-inspector-core";
 
-export type AuthMethod = "entraId" | "apiKey";
-
-export interface FoundryConfig {
-  projectEndpoint: string;
-  authMethod: AuthMethod;
-  maxRunsToList: number;
-  responseIds: string[];
-  conversationIds: string[];
-}
+// Config shape lives in the shared core package; re-export it so existing
+// extension imports (`from "../config"`) keep working unchanged.
+export type { AuthMethod, FoundryConfig };
 
 const SECRET_KEY = "aiFoundryAgentInspector.apiKey";
 

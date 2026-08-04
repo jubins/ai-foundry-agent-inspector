@@ -4,7 +4,7 @@ import { storeApiKey, deleteApiKey } from "../config";
 export async function setApiKey(secrets: vscode.SecretStorage): Promise<void> {
   const key = await vscode.window.showInputBox({
     title: "Foundry Trace: Set API Key",
-    prompt: "Enter your Azure AI Foundry project API key",
+    prompt: "Enter your Microsoft Foundry project API key",
     password: true,
     ignoreFocusOut: true,
     placeHolder: "Paste your API key here",

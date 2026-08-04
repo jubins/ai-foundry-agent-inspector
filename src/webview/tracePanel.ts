@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { TraceAgent } from "../trace/model";
+import type { TraceAgent } from "foundry-trace-inspector-core";
 import { getConnectionState, setConnectionState } from "../sidebar/connectionState";
 
 let currentPanel: vscode.WebviewPanel | undefined;
