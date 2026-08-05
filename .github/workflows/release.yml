@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
 
@@ -91,13 +91,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
       # Trusted Publishing (OIDC) and provenance require npm >= 11.5.1, newer
-      # than the npm bundled with Node 20.
+      # than the npm bundled with Node 22. Pin the major so a future npm that
+      # drops the current Node version can't break the release.
       - name: Upgrade npm for OIDC publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
       - run: npm ci
 
       - name: Apply the bumped manifests
