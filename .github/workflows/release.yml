@@ -5,6 +5,13 @@ name: Release
 # the VS Code Marketplace, and only then pushes the release commit/tag and cuts
 # the GitHub Release. Nothing is pushed to master until every publish succeeds,
 # so a failure never leaves a stray version bump behind.
+#
+# Every publish step is idempotent: it checks whether the target already carries
+# this version and skips instead of failing. A run that published to npm but
+# died before the Marketplace (or before pushing the release commit) can simply
+# be re-run — the finished targets are skipped, the unfinished ones complete,
+# and finalize cuts the release. That is what keeps a half-published version
+# from stranding master a version behind with no way forward but a manual fix.
 on:
   workflow_dispatch:
     inputs:
@@ -33,20 +40,73 @@ jobs:
     outputs:
       version: ${{ steps.bump.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
 
-      - name: Apply version bump to all manifests (working tree only)
+      - name: Resolve the version to release
         id: bump
         env:
           VERSION_BUMP: ${{ github.event.inputs.version }}
         run: |
+          # A previous run may have published to some targets but failed before
+          # pushing the version bump to master, leaving master a version behind
+          # what is actually published. There are two distinct situations and
+          # they want opposite handling:
+          #
+          #   - Partially published (live on some targets, not all): finish it.
+          #     Re-releasing this same version lets the idempotent publish steps
+          #     skip what is done and complete what is not.
+          #   - Fully published everywhere: it is a completed release that only
+          #     missed its git commit. Bump past it to get a fresh version.
+          #
+          # The old logic bumped past *any* version seen anywhere, which turned
+          # a recoverable partial release into an abandoned one every time.
+
+          on_npm() { npm view "$1@$2" version >/dev/null 2>&1; }
+
+          # `vsce show` prints "  Version:            0.2.1   " — the label is
+          # indented and the value carries trailing spaces, so both ends must be
+          # trimmed or the comparison silently never matches.
+          marketplace_version() {
+            npx --yes @vscode/vsce show jubinsoni.foundry-trace-inspector 2>/dev/null \
+              | awk -F': +' '
+                  tolower($1) ~ /^[[:space:]]*version[[:space:]]*$/ {
+                    v=$2; gsub(/[[:space:]]+$/, "", v); print v; exit
+                  }'
+          }
+
+          MKT="$(marketplace_version)"
+
+          # How many of the three targets already carry version $1?
+          published_count() {
+            local v="$1" n=0
+            on_npm foundry-trace-inspector-core "$v" && n=$((n + 1))
+            on_npm foundry-trace-inspector-cli  "$v" && n=$((n + 1))
+            [ "$MKT" = "$v" ] && n=$((n + 1))
+            echo "$n"
+          }
+
           npm version "$VERSION_BUMP" --no-git-tag-version
           NEW_VERSION="$(node -p "require('./package.json').version")"
+
+          # Skip over versions that are already fully released; stop on the
+          # first that is free (count 0) or only partially published.
+          while [ "$(published_count "$NEW_VERSION")" = "3" ]; do
+            echo "Version ${NEW_VERSION} is fully published; bumping past it."
+            npm version patch --no-git-tag-version
+            NEW_VERSION="$(node -p "require('./package.json').version")"
+          done
+
+          COUNT="$(published_count "$NEW_VERSION")"
+          if [ "$COUNT" != "0" ]; then
+            echo "::notice::Resuming partially published release ${NEW_VERSION} (${COUNT}/3 targets already live); finished targets will be skipped."
+          fi
+
+          echo "Releasing ${NEW_VERSION}"
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
           npm version "$NEW_VERSION" --no-git-tag-version --workspace foundry-trace-inspector-core
@@ -70,7 +130,7 @@ jobs:
         run: npx --yes @vscode/vsce package --no-dependencies --out "foundry-trace-inspector-${VERSION}.vsix"
 
       - name: Upload bumped tree (manifests + lockfile) and the .vsix
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: release-artifacts
           include-hidden-files: true
@@ -88,8 +148,8 @@ jobs:
     # id-token: write is inherited from the top-level permissions; it lets npm
     # mint a short-lived OIDC credential for Trusted Publishing (no token).
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -102,42 +162,71 @@ jobs:
       - run: npm ci
 
       - name: Apply the bumped manifests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: release-artifacts
 
       # Core first: the CLI depends on it. Auth is via OIDC — no NODE_AUTH_TOKEN.
+      # Each publish is skipped when that exact version is already on the
+      # registry, so re-running after a partial release is safe.
       - name: Publish core
-        run: npm publish --workspace foundry-trace-inspector-core --access public --provenance
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          if npm view "foundry-trace-inspector-core@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::core@${VERSION} is already on npm; skipping."
+          else
+            npm publish --workspace foundry-trace-inspector-core --access public --provenance
+          fi
+
       - name: Publish CLI
-        run: npm publish --workspace foundry-trace-inspector-cli --access public --provenance
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          if npm view "foundry-trace-inspector-cli@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::cli@${VERSION} is already on npm; skipping."
+          else
+            npm publish --workspace foundry-trace-inspector-cli --access public --provenance
+          fi
 
   publish-vscode:
     name: Publish the VS Code extension
     needs: prepare
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: release-artifacts
+      # Skipped when the Marketplace already serves this version, so a re-run
+      # after a partial release does not fail with "already exists".
       - name: Publish the packaged .vsix to the Marketplace
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
           VSCE_PAT: ${{ secrets.VSCE_PAT_JS }}
-        run: npx --yes @vscode/vsce publish --no-dependencies --packagePath "foundry-trace-inspector-${VERSION}.vsix"
+        run: |
+          LIVE="$(npx --yes @vscode/vsce show jubinsoni.foundry-trace-inspector 2>/dev/null \
+                   | awk -F': +' '
+                       tolower($1) ~ /^[[:space:]]*version[[:space:]]*$/ {
+                         v=$2; gsub(/[[:space:]]+$/, "", v); print v; exit
+                       }')"
+          if [ "$LIVE" = "$VERSION" ]; then
+            echo "::notice::Marketplace already serves ${VERSION}; skipping."
+          else
+            npx --yes @vscode/vsce publish --no-dependencies --packagePath "foundry-trace-inspector-${VERSION}.vsix"
+          fi
 
   finalize:
     name: Push release commit and create GitHub Release
     needs: [prepare, publish-npm, publish-vscode]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - name: Apply the bumped manifests + collect the .vsix
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: release-artifacts
 
@@ -149,14 +238,20 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add package.json package-lock.json packages/core/package.json packages/cli/package.json
-          git commit -m "Release ${VERSION}"
+          # A re-run against a master that already carries the bump has nothing
+          # to commit; that is success, not failure.
+          if git diff --cached --quiet; then
+            echo "::notice::Manifests already at ${VERSION}; no release commit needed."
+          else
+            git commit -m "Release ${VERSION}"
+          fi
 
           TAG="v${VERSION}"
           # Recreate a stale tag left by a previous failed run, if present.
           if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
             git push origin --delete "${TAG}" || true
           fi
-          git tag -a "${TAG}" -m "Release ${VERSION}"
+          git tag -fa "${TAG}" -m "Release ${VERSION}"
           git push --follow-tags origin HEAD:master
 
       - name: Extract this version's changelog notes
@@ -198,7 +293,15 @@ jobs:
           NOTES: ${{ steps.notes.outputs.notes }}
         run: |
           TAG="v$VERSION"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes "$NOTES" \
-            "foundry-trace-inspector-${VERSION}.vsix#Foundry Trace Inspector (.vsix)"
+          VSIX="foundry-trace-inspector-${VERSION}.vsix#Foundry Trace Inspector (.vsix)"
+          # Update in place if a previous run already cut this release.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release ${TAG} exists; updating notes and asset."
+            gh release edit "$TAG" --title "$TAG" --notes "$NOTES"
+            gh release upload "$TAG" "$VSIX" --clobber
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes "$NOTES" \
+              "$VSIX"
+          fi
