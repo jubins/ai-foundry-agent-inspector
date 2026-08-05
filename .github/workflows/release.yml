@@ -17,9 +17,11 @@ on:
           - major
 
 # contents: write lets the bump job push the release commit/tag and the final
-# job create the GitHub Release.
+# job create the GitHub Release. id-token: write lets the npm publish job
+# authenticate to npm via OIDC (Trusted Publishing) instead of a stored token.
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   bump:
@@ -91,6 +93,8 @@ jobs:
     name: Publish to npm
     needs: [bump, test]
     runs-on: ubuntu-latest
+    # id-token: write is inherited from the top-level permissions; it lets npm
+    # mint a short-lived OIDC credential for Trusted Publishing (no token).
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,16 +104,16 @@ jobs:
           node-version: 20
           cache: npm
           registry-url: https://registry.npmjs.org
+      # Trusted Publishing (OIDC) and provenance require npm >= 11.5.1, newer
+      # than the npm bundled with Node 20.
+      - name: Upgrade npm for OIDC publishing
+        run: npm install -g npm@latest
       - run: npm ci
-      # Core first: the CLI depends on it.
+      # Core first: the CLI depends on it. Auth is via OIDC — no NODE_AUTH_TOKEN.
       - name: Publish core
-        run: npm publish --workspace foundry-trace-inspector-core --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace foundry-trace-inspector-core --access public --provenance
       - name: Publish CLI
-        run: npm publish --workspace foundry-trace-inspector-cli --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --workspace foundry-trace-inspector-cli --access public --provenance
 
   publish-vscode:
     name: Publish the VS Code extension
